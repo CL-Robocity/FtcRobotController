@@ -58,17 +58,24 @@ public class TeleOpMovements extends LinearOpMode {
                 rightPower /= max;
             }
 
-
             if (gamepad1.right_trigger_pressed) { slowDown = true;}
             else { slowDown = false; }
 
             if (slowDown){ // dimezza la velocità massima del robot
-                leftPower/=2;
-                rightPower/=2;
+                leftPower*=0.5;
+                rightPower*=0.5;
             }
 
             leftMotor.setPower(leftPower);
             rightMotor.setPower(rightPower);
+
+            telemetry.addData("Status", "Running");
+            telemetry.addData("Drive mode", slowDown ? "SLOW 50%" : "NORMAL 100%");
+            telemetry.addData("Left POWER", leftPower);
+            telemetry.addData("Right POWER", rightPower);
+            telemetry.addData("Left ENCODER", leftMotor.getCurrentPosition());
+            telemetry.addData("Right ENCODER", rightMotor.getCurrentPosition());
+            telemetry.update();
         }
 
     }

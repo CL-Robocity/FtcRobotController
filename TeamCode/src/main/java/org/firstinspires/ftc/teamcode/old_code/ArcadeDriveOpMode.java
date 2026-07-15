@@ -1,12 +1,13 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.old_code;
 
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.mechanisms.ArcadeDrive;
 
-@TeleOp(name = "Arcade_Drive_Test")
+@Disabled
+@TeleOp(name = "Arcade_Drive_Test", group = "Competition")
 public class ArcadeDriveOpMode extends OpMode {
 
     ArcadeDrive drive = new ArcadeDrive();

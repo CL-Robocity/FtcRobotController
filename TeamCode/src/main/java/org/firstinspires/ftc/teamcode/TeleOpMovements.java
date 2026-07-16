@@ -40,7 +40,7 @@ public class TeleOpMovements extends LinearOpMode {
         while (opModeIsActive()){
 
             double throttleInput = -gamepad1.left_stick_y; // lo stick da valori invertiti in y
-            double spinInput = gamepad1.right_stick_x;
+            double spinInput = gamepad1.left_stick_x;
 
             double throttle = (Math.abs(throttleInput) < DEADBAND) ? 0.0 : throttleInput; // annulla lo stick drift
             double spin = (Math.abs(spinInput) < DEADBAND) ? 0.0 : spinInput;
@@ -48,8 +48,8 @@ public class TeleOpMovements extends LinearOpMode {
             throttle = Math.pow(throttle,2); // aumenta la precisione a basse veloctà
             spin = Math.pow(spin,3);
             */
-            double leftPower = throttle + spin;
-            double rightPower = throttle - spin;
+            double leftPower = throttle - spin;
+            double rightPower = throttle + spin;
 
             double max = Math.max(Math.abs(leftPower),Math.abs(rightPower));
 

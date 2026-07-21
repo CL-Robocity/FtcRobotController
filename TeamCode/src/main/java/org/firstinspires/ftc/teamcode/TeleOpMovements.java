@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -22,6 +21,7 @@ public class TeleOpMovements extends LinearOpMode {
     private static final double TARGET_VELOCITY = 1600.0;
     private static final double SERVO_CLOSE = 0.2;
     private static final double SERVO_OPEN = 1.0;
+    private static final int WAIT_TO_PUSH = 1000;
 
     @Override
     public void runOpMode() throws InterruptedException{
@@ -137,7 +137,7 @@ public class TeleOpMovements extends LinearOpMode {
                 feedTimer.reset();
             }
 
-            if (feeding && feedTimer.milliseconds() > 200){
+            if (feeding && feedTimer.milliseconds() > WAIT_TO_PUSH){  // change value at the 25th line
                 upIntakeMotor.setPower(1);
             }
 

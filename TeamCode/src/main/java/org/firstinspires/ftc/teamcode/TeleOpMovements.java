@@ -143,7 +143,7 @@ public class TeleOpMovements extends LinearOpMode {
             telemetry.addData("Intake Power", upIntakeMotor.getPower());
             telemetry.addData("Right Flywheel velocity",flywheel_right.getVelocity());
             telemetry.addData("Left Flywheel velocity", flywheel_left.getVelocity());
-            telemetry.addData("Servo's state:", (gamepad1.a) ? "OPEN" : "CLOSE");
+            telemetry.addData("Servo's state", (gamepad1.a) ? "OPEN" : "CLOSE");
             telemetry.update();
         }
     }

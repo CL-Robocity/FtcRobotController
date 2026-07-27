@@ -13,7 +13,7 @@ public class TeleOpMovements extends LinearOpMode {
     private Servo servitore_right, servitore_left;
     private int currentPower = 0;
     private final int maxStep = 16;
-    private static final int TARGET_VELOCITY = 1550;
+    private static final int TARGET_VELOCITY = 200;
     private static final double SERVO_CLOSE = 0;
     private static final double SERVO_OPEN = 0.15;
     boolean flywheelActivate = false;
@@ -133,19 +133,6 @@ public class TeleOpMovements extends LinearOpMode {
                 flywheel_right.setVelocity(0);
                 flywheel_left.setVelocity(0);
             }
-
-            /*
-            if (gamepad1.y){
-                flywheelActivate = true;
-                //int filteredTargetVelocity = update(TARGET_VELOCITY);
-                flywheel_right.setVelocity(TARGET_VELOCITY);
-                flywheel_left.setVelocity(TARGET_VELOCITY);
-            } else if (gamepad1.xWasPressed()){
-                flywheelActivate = false;
-                flywheel_right.setVelocity(0);
-                flywheel_left.setVelocity(0);
-            }
-*/
 
             // OPEN THE SERVOS AND MAKING THE INTAKE GO
 

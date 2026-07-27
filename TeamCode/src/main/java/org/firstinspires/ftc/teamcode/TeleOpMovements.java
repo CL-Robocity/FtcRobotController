@@ -13,10 +13,11 @@ public class TeleOpMovements extends LinearOpMode {
     private Servo servitore_right, servitore_left;
     private int currentPower = 0;
     private final int maxStep = 16;
-    private static final int TARGET_VELOCITY = 1450;
+    private static final int TARGET_VELOCITY = 1550;
     private static final double SERVO_CLOSE = 0;
-    private static final double SERVO_OPEN = 0.08;
+    private static final double SERVO_OPEN = 0.15;
     boolean flywheelActivate = false;
+    boolean yStateBefore = false;
 
     @Override
     public void runOpMode() throws InterruptedException{
@@ -96,6 +97,12 @@ public class TeleOpMovements extends LinearOpMode {
                 rightPower*=0.6;
             }
 
+            // PRESS R2 FOR MAKING THE ROBOT GO SLOWER
+            if (gamepad1.left_trigger_pressed){
+                leftPower*=0.2;
+                rightPower*=0.2;
+            }
+
             leftMotor.setPower(leftPower);
             rightMotor.setPower(rightPower);
 
@@ -105,21 +112,29 @@ public class TeleOpMovements extends LinearOpMode {
                 upIntakeMotor.setPower(-1);
             } else if (gamepad1.left_bumper){
                 upIntakeMotor.setPower(1);
-                flywheel_right.setVelocity(-350);
-                flywheel_left.setVelocity(-350);
-            } else if (!flywheelActivate){
+                upIntakeSlowMotor.setPower(1);
+            }
+
+            // FLYWHEEL WITH TRIANGOLO TOGGLE
+
+            boolean yStateActual = gamepad1.y;
+
+            if (yStateActual && !yStateBefore){
+                flywheelActivate = !flywheelActivate;
+            }
+
+            yStateBefore = yStateActual;
+
+            if (flywheelActivate){
+                int filteredTargetVelocity = update(TARGET_VELOCITY);
+                flywheel_right.setVelocity(filteredTargetVelocity);
+                flywheel_left.setVelocity(filteredTargetVelocity);
+            } else {
                 flywheel_right.setVelocity(0);
                 flywheel_left.setVelocity(0);
             }
 
-            // SECOND INTAKE FOR THE SLOWER MOTOR (PRESS CERCHIO)
-
-            if (gamepad1.b){
-                upIntakeSlowMotor.setPower(-1);
-            }
-
-            // FLYWHEEL WITH TRIANGOLO e QUADRATO (CHIEDERE AIELLO PER FARE TOGGLE DEL TRIANGOLO)
-
+            /*
             if (gamepad1.y){
                 flywheelActivate = true;
                 //int filteredTargetVelocity = update(TARGET_VELOCITY);
@@ -130,6 +145,7 @@ public class TeleOpMovements extends LinearOpMode {
                 flywheel_right.setVelocity(0);
                 flywheel_left.setVelocity(0);
             }
+*/
 
             // OPEN THE SERVOS AND MAKING THE INTAKE GO
 
@@ -137,11 +153,13 @@ public class TeleOpMovements extends LinearOpMode {
                 servitore_right.setPosition(SERVO_OPEN);
                 servitore_left.setPosition(SERVO_OPEN);
                 upIntakeMotor.setPower(-1);
+                upIntakeSlowMotor.setPower(-1);
             } else {
                 servitore_right.setPosition(SERVO_CLOSE);
                 servitore_left.setPosition(SERVO_CLOSE);
                 if (!gamepad1.left_bumper && !gamepad1.right_bumper){
                     upIntakeMotor.setPower(0);
+                    upIntakeSlowMotor.setPower(0);
                 }
             }
 
@@ -163,10 +181,10 @@ public class TeleOpMovements extends LinearOpMode {
     public int update(int targetPower){
 
         int error = targetPower - currentPower;
-        if (error < maxStep){
-            error += maxStep;
-        } else if (error > -maxStep){
-            error -= maxStep;
+        if (error > maxStep){
+            currentPower += maxStep;
+        } else if (error < -maxStep){
+            currentPower -= maxStep;
         } else{
             currentPower = targetPower;
         }

@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
 @TeleOp (name = "New Arcade Drive - FGC",group = "TeleOp Competition")
@@ -13,7 +14,7 @@ public class TeleOpMovements extends LinearOpMode {
     private Servo servitore_right, servitore_left;
     private int currentPower = 0;
     private final int maxStep = 16;
-    private static final int TARGET_VELOCITY = 200;
+    private static final int TARGET_VELOCITY = 1600;
     private static final double SERVO_CLOSE = 0;
     private static final double SERVO_OPEN = 0.15;
     boolean flywheelActivate = false;
@@ -41,7 +42,7 @@ public class TeleOpMovements extends LinearOpMode {
         upIntakeSlowMotor.setDirection(DcMotor.Direction.FORWARD); // "
 
         flywheel_right.setDirection(DcMotorEx.Direction.FORWARD);
-        flywheel_left.setDirection(DcMotorEx.Direction.REVERSE);
+        flywheel_left.setDirection(DcMotorEx.Direction.FORWARD);
 
         servitore_right.setDirection(Servo.Direction.REVERSE);
 

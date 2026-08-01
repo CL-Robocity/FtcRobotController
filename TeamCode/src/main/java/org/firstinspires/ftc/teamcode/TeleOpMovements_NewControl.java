@@ -151,13 +151,31 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
             /// -*=======*- GAMEPAD2 | MECCANISMI -*=======*-
 
-            // INTAKE WITH R1 e OUTTAKE WITH R2
+            // INTAKE WITH R1 e OUTTAKE WITH R2 and OPEN THE SERVOS AND MAKING THE INTAKE GO
 
-            if (gamepad2.right_bumper){
+            if (gamepad2.a) {
+                servitoreRight.setPosition(SERVO_OPEN);
+                servitoreLeft.setPosition(SERVO_OPEN);
                 upIntakeMotor.setPower(-1);
-            } else if (gamepad2.left_bumper){
+                upIntakeSlowMotor.setPower(-1);
+            }
+            else if (gamepad2.right_bumper) {
+                servitoreRight.setPosition(SERVO_CLOSE);
+                servitoreLeft.setPosition(SERVO_CLOSE);
+                upIntakeMotor.setPower(-1);
+                upIntakeSlowMotor.setPower(0); // Assicurati di dichiarare anche questo per evitare stati indefiniti
+            }
+            else if (gamepad2.left_bumper) {
+                servitoreRight.setPosition(SERVO_CLOSE);
+                servitoreLeft.setPosition(SERVO_CLOSE);
                 upIntakeMotor.setPower(1);
                 upIntakeSlowMotor.setPower(1);
+            }
+            else {
+                servitoreRight.setPosition(SERVO_CLOSE);
+                servitoreLeft.setPosition(SERVO_CLOSE);
+                upIntakeMotor.setPower(0);
+                upIntakeSlowMotor.setPower(0);
             }
 
             // FLYWHEEL WITH TRIANGOLO TOGGLE
@@ -179,21 +197,6 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 flywheel_left.setVelocity(0);
             }
 
-            // OPEN THE SERVOS AND MAKING THE INTAKE GO
-
-            if (gamepad2.a){
-                servitoreRight.setPosition(SERVO_OPEN);
-                servitoreLeft.setPosition(SERVO_OPEN);
-                upIntakeMotor.setPower(-1);
-                upIntakeSlowMotor.setPower(-1);
-            } else {
-                servitoreRight.setPosition(SERVO_CLOSE);
-                servitoreLeft.setPosition(SERVO_CLOSE);
-                if (!gamepad2.left_bumper && !gamepad2.right_bumper){
-                    upIntakeMotor.setPower(0);
-                    upIntakeSlowMotor.setPower(0);
-                }
-            }
 
             // RETRACT THE EXTENDABLE BARS WITH D_PAD_UP AND D_PAD_DOWN
 /*

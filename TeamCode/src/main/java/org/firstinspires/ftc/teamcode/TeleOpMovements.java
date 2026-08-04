@@ -15,11 +15,11 @@ public class TeleOpMovements extends LinearOpMode {
     private DcMotor leftMotor, rightMotor, upIntakeMotor, upIntakeSlowMotor;
     private DcMotorEx flywheel_left, flywheel_right;
     private Servo servitoreRight, servitoreLeft;
-    private TouchSensor touchSensorLeft, touchSensorRight;
-    private CRServo CRServoLeft, CRServoRight;
+    //private TouchSensor touchSensorLeft, touchSensorRight;
+    //private CRServo CRServoLeft, CRServoRight;
     private int currentPower = 0;
     private final int maxStep = 16;
-    private static final int TARGET_VELOCITY = 2000;
+    private static final int TARGET_VELOCITY = 2200;
     private static final double SERVO_CLOSE = 0;
     private static final double SERVO_OPEN = 0.12;
     boolean flywheelActivate = false;
@@ -33,8 +33,8 @@ public class TeleOpMovements extends LinearOpMode {
     public void runOpMode() throws InterruptedException{
 
         /// INITIALIZING SENSORS
-        touchSensorLeft = hardwareMap.get(TouchSensor.class, "touch_sensor_left");
-        touchSensorRight = hardwareMap.get(TouchSensor.class, "touch_sensor_right");
+        //touchSensorLeft = hardwareMap.get(TouchSensor.class, "touch_sensor_left");
+        //touchSensorRight = hardwareMap.get(TouchSensor.class, "touch_sensor_right");
 
         /// INITIALIZING MOTORS
         leftMotor = hardwareMap.get(DcMotor.class, "left_motor");
@@ -44,8 +44,8 @@ public class TeleOpMovements extends LinearOpMode {
 
         servitoreRight = hardwareMap.get(Servo.class, "servitore_1");
         servitoreLeft = hardwareMap.get(Servo.class, "servitore_2");
-        CRServoLeft = hardwareMap.get(CRServo.class, "CRServitore_left");
-        CRServoRight = hardwareMap.get(CRServo.class, "CRServitore_right");
+        //CRServoLeft = hardwareMap.get(CRServo.class, "CRServitore_left");
+        //CRServoRight = hardwareMap.get(CRServo.class, "CRServitore_right");
 
         flywheel_right = hardwareMap.get(DcMotorEx.class, "flywheel_right");
         flywheel_left = hardwareMap.get(DcMotorEx.class, "flywheel_left");
@@ -62,8 +62,8 @@ public class TeleOpMovements extends LinearOpMode {
         servitoreRight.setDirection(Servo.Direction.REVERSE);
         servitoreLeft.setDirection(Servo.Direction.FORWARD);
 
-        CRServoRight.setDirection(CRServo.Direction.REVERSE);
-        CRServoLeft.setDirection(CRServo.Direction.FORWARD);
+        //CRServoRight.setDirection(CRServo.Direction.REVERSE);
+        //CRServoLeft.setDirection(CRServo.Direction.FORWARD);
 
         /// RESETTING THE ENCODER
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -172,8 +172,12 @@ public class TeleOpMovements extends LinearOpMode {
                 }
             }
 
-            // RETRACT THE EXTENDABLE BARS WITH D_PAD_UP AND D_PAD_DOWN
+            // TERREMOTO
 
+
+
+            // RETRACT THE EXTENDABLE BARS WITH D_PAD_UP AND D_PAD_DOWN
+/*
             if (!servoIsMoving ){
                 if (gamepad1.dpad_up && !barsOut){
                     crservoPower = -1.0;
@@ -206,7 +210,7 @@ public class TeleOpMovements extends LinearOpMode {
                 CRServoLeft.setPower(0);
                 CRServoRight.setPower(0);
             }
-
+*/
             // A SUMMARY FOR THE DRIVER
             telemetry.addData("Status", "Running");
             telemetry.addData("Left POWER", leftPower);

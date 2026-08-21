@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -61,8 +62,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         upIntakeMotor.setDirection(DcMotor.Direction.FORWARD); // è invertito (-1 intake, +1 outtake)
         upIntakeSlowMotor.setDirection(DcMotor.Direction.REVERSE); // "
 
-        flywheel_right.setDirection(DcMotorEx.Direction.FORWARD);
-        flywheel_left.setDirection(DcMotorEx.Direction.FORWARD);
+        flywheel_right.setDirection(DcMotorEx.Direction.REVERSE);
+        flywheel_left.setDirection(DcMotorEx.Direction.REVERSE);
 
         servitoreRight.setDirection(Servo.Direction.REVERSE);
         servitoreLeft.setDirection(Servo.Direction.FORWARD);

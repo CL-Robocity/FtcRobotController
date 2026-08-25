@@ -66,31 +66,50 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 @TeleOp (name = "New Controller - FGC",group = "TeleOp Competition")
 public class TeleOpMovements_NewControl extends LinearOpMode {
-    private ElapsedTime timerServo = new ElapsedTime();
+    private final ElapsedTime timerServo = new ElapsedTime();
+
+    // DICHIARARE I MOTORI
     private DcMotor leftMotor, rightMotor, upIntakeMotor, upIntakeSlowMotor, climbMotor;
     private DcMotorEx flywheel_left, flywheel_right;
     private Servo servitoreRight, servitoreLeft;
 
+    // USE: UPDATE
     private int currentPower = 0;
     private final int maxStep = 16;
+
+    // USE: COSTANTI / VARIABILI con valore predefinito
     private static final int TARGET_VELOCITY = 2000;
     private static final double SERVO_CLOSE = 0.04;
     private static final double SERVO_OPEN = 0.12;
+    double scale = 0.75;
+    double climbVelocity = 0.5;
+
+    // USE: FLYWHEEL
     boolean flywheelActivate = false;
     boolean yStateBefore = false;
+
+    // USE: MOTORS
     double leftPower;
     double rightPower;
+
+    // USE: TOGGLE USTER MODE
     boolean bStateBefore = false;
     boolean usterMode = false;
+
+    // USE: COMBO
     boolean comboStateBefore = false;
-    boolean fullController = false;
     boolean comboStateActual = false;
-    double scale = 0.75;
+    boolean fullController = false;
+
+    // USE: MARCE
     boolean lastRightTrigger = false;
     boolean lastLeftTrigger = false;
+
+    // USE: CLIMBING MODE
     boolean xStateBefore = false;
     boolean climbingMode = false;
-    double climbVelocity = 0.5;
+    boolean lastUpDpad = false;
+    boolean lastDownDpad = false;
 
     @Override
     public void runOpMode() throws InterruptedException{
@@ -164,14 +183,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         waitForStart();
         while (opModeIsActive()){
 
-            /// COMBO
+            /// -*=======*- COMBO -*=======*-
 
-            if (gamepad1.left_stick_button && gamepad1.right_stick_button){
-                comboStateActual = true;
-            } else {
-                comboStateActual = false;
-
-            }
+            comboStateActual = gamepad1.left_stick_button && gamepad1.right_stick_button;
 
             if (comboStateActual && !comboStateBefore){
                 fullController = !fullController;
@@ -197,12 +211,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 } else {
                     double throttle = -gamepad1.left_stick_y;
                     double spin = gamepad1.right_stick_x;
-
                     leftPower = throttle + spin;
                     rightPower = throttle - spin;
-
                     double max = Math.max(Math.abs(leftPower),Math.abs(rightPower));
-
                     if (max>1.0){
                         leftPower /= max;
                         rightPower /= max;
@@ -300,11 +311,19 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                     climbMotor.setPower(0);
                 }
 
-                if (gamepad1.dpad_up && climbVelocity< 1.0){
+                boolean currentUpDpad = gamepad1.dpad_up;
+                boolean currentDownDpad = gamepad1.dpad_down;
+
+                if (currentUpDpad && !lastUpDpad){
                     climbVelocity+=.1;
-                } else if (gamepad1.dpad_down&&climbVelocity>0.1){
+                }
+
+                if (currentDownDpad && !lastDownDpad){
                     climbVelocity-=.1;
                 }
+
+                lastDownDpad = currentDownDpad;
+                lastUpDpad = currentUpDpad;
 
             } else { /// CLAUDIO mode attivata
 
@@ -327,12 +346,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 } else {
                     double throttle = -gamepad1.left_stick_y;
                     double spin = gamepad1.right_stick_x;
-
                     leftPower = throttle + spin;
                     rightPower = throttle - spin;
-
                     double max = Math.max(Math.abs(leftPower),Math.abs(rightPower));
-
                     if (max>1.0){
                         leftPower /= max;
                         rightPower /= max;
@@ -437,7 +453,6 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 }
             }
 
-
             // A SUMMARY FOR THE DRIVER
             telemetry.addData("Status", "Running");
             telemetry.addData("Left POWER", leftPower);
@@ -451,6 +466,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             telemetry.addData("Full Control (God Mode)", (fullController) ? "You are now ADMIN" : "You are only CLAUDIO");
             telemetry.addData("Speed", (scale==1.0) ? 4 : (scale==0.75) ? 3 : (scale==0.5) ? 2 : (scale==0.25) ? 1 : "Folle");
             telemetry.addData("Climbing mode", (climbingMode) ? "Activated" : "OFF");
+            telemetry.addData("Climbing velocity", climbVelocity);
             telemetry.update();
         }
     }

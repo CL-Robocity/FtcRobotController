@@ -4,7 +4,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -18,7 +17,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *
  *              .---| DPAD |---.                                    .---| TASTI |---.
  *             /      .^.       \                                  /      (Y)        \  Y: [God Mode] Flywheel ON/OFF
- *            |     <     >      |                                |    (X)   (B)     | B: Toggle Uster / Arcade
+ *            |     <     >      |                                |    (X)   (B)     | B: To 0 climb speed
  *             \      'v'       /                                  \      (A)        /  X: Toggle Climbing
  *              '--------------'                                    '---------------'   A: [God Mode] Sparo Flywheel
  *             ^: Climb Speed +0.1
@@ -63,13 +62,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * =========================================================================================
  */
 
-
 @TeleOp (name = "New Controller - FGC",group = "TeleOp Competition")
 public class TeleOpMovements_NewControl extends LinearOpMode {
     private final ElapsedTime timerServo = new ElapsedTime();
 
     // DICHIARARE I MOTORI
-    private DcMotor leftMotor, rightMotor, upIntakeMotor, upIntakeSlowMotor, climbMotor;
+    private DcMotor leftMotor, rightMotor, upIntakeMotor, upIntakeSlowMotor, climbMotorInt, climbMotorEst;
     private DcMotorEx flywheel_left, flywheel_right;
     private Servo servitoreRight, servitoreLeft;
 
@@ -78,7 +76,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     private final int maxStep = 16;
 
     // USE: COSTANTI / VARIABILI con valore predefinito
-    private static final int TARGET_VELOCITY = 2000;
+    private static final int TARGET_VELOCITY = 1800;
     private static final double SERVO_CLOSE = 0.04;
     private static final double SERVO_OPEN = 0.12;
     double scale = 0.75;
@@ -128,7 +126,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         flywheel_right = hardwareMap.get(DcMotorEx.class, "flywheel_right");
         flywheel_left = hardwareMap.get(DcMotorEx.class, "flywheel_left");
 
-        climbMotor = hardwareMap.get(DcMotor.class, "climb_motor");
+        climbMotorInt = hardwareMap.get(DcMotor.class, "climb_motor_int");
+        climbMotorEst = hardwareMap.get(DcMotor.class, "climb_motor_est");
 
         /// SET MOVE DIRECTION OF MOTORS
         leftMotor.setDirection(DcMotor.Direction.REVERSE);
@@ -142,7 +141,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         servitoreRight.setDirection(Servo.Direction.REVERSE);
         servitoreLeft.setDirection(Servo.Direction.FORWARD);
 
-        climbMotor.setDirection(DcMotor.Direction.REVERSE);
+        climbMotorInt.setDirection(DcMotor.Direction.FORWARD);
+        climbMotorEst.setDirection(DcMotor.Direction.FORWARD);
 
         /// RESETTING THE ENCODER
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -151,7 +151,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         flywheel_right.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         flywheel_left.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
 
-        climbMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        climbMotorInt.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        climbMotorEst.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         /// SET TO USE THE ENCODER FOR THE SPEED
         leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -162,7 +163,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         flywheel_right.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flywheel_left.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
-        climbMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        climbMotorInt.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        climbMotorEst.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         /// SET THE MOTOR BEHAVIOR WHEN STOPPED
         leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -173,7 +175,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         flywheel_right.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
         flywheel_left.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
 
-        climbMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        climbMotorInt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        climbMotorEst.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
 
         /// WHEN THE ROBOT IS READY, PRESS PLAY
         telemetry.addLine("[Initialized] Press Play to start");
@@ -197,13 +201,13 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 // MOVIMENTO
 
-                boolean bStateActual = gamepad1.b;
+                // boolean bStateActual = gamepad1.b;
 
-                if (bStateActual && !bStateBefore){
-                    usterMode = !usterMode;
-                }
+                //if (bStateActual && !bStateBefore){
+                //    usterMode = !usterMode;
+                //}
 
-                bStateBefore = bStateActual;
+                //bStateBefore = bStateActual;
 
                 if (usterMode){
                     leftPower = -gamepad1.left_stick_y;
@@ -220,10 +224,10 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                     }
                 }
 
+                // MARCE
+
                 boolean currentRightTrigger = gamepad1.right_trigger_pressed;
                 boolean currentLeftTrigger = gamepad1.left_trigger_pressed;
-
-                // MARCE
 
                 if (currentRightTrigger && !lastRightTrigger) {
                     if (scale < 1.0) {
@@ -306,19 +310,21 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 xStateBefore=xStateActual;
 
                 if (climbingMode){
-                    climbMotor.setPower(climbVelocity);
+                    climbMotorInt.setPower(climbVelocity);
+                    climbMotorEst.setPower(climbVelocity);
                 } else {
-                    climbMotor.setPower(0);
+                    climbMotorInt.setPower(0);
+                    climbMotorEst.setPower(0);
                 }
 
                 boolean currentUpDpad = gamepad1.dpad_up;
                 boolean currentDownDpad = gamepad1.dpad_down;
 
-                if (currentUpDpad && !lastUpDpad){
+                if (currentUpDpad && !lastUpDpad && climbVelocity< 0.9){
                     climbVelocity+=.1;
                 }
 
-                if (currentDownDpad && !lastDownDpad){
+                if (currentDownDpad && !lastDownDpad && climbVelocity>-0.9){
                     climbVelocity-=.1;
                 }
 
@@ -332,12 +338,12 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 // GUIDA
 
                 boolean bStateActual = gamepad1.b;
-
+/*
                 if (bStateActual && !bStateBefore){
                     usterMode = !usterMode;
                 }
-
-                bStateBefore = bStateActual;
+*/
+                //bStateBefore = bStateActual;
 
                 if (usterMode){
                     leftPower = -gamepad1.left_stick_y;
@@ -392,17 +398,30 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 xStateBefore=xStateActual;
 
                 if (climbingMode){
-                    climbMotor.setPower(climbVelocity);
+                    climbMotorInt.setPower(climbVelocity);
+                    climbMotorEst.setPower(climbVelocity);
                 } else {
-                    climbMotor.setPower(0);
+                    climbMotorInt.setPower(0);
+                    climbMotorEst.setPower(0);
                 }
 
-                if (gamepad1.dpad_up && climbVelocity< 1.0){
-                    climbVelocity+=.1;
-                } else if (gamepad1.dpad_down&&climbVelocity>0.1){
-                    climbVelocity-=.1;
+                boolean currentUpDpad = gamepad1.dpad_up;
+                boolean currentDownDpad = gamepad1.dpad_down;
+
+                if (currentUpDpad && !lastUpDpad && climbVelocity < 0.9){
+                    climbVelocity+=.25;
                 }
 
+                if (currentDownDpad && !lastDownDpad && climbVelocity > -0.25){
+                    climbVelocity-=.25;
+                }
+
+                lastDownDpad = currentDownDpad;
+                lastUpDpad = currentUpDpad;
+
+                if (gamepad1.bWasPressed()){
+                    climbVelocity = 0;
+                }
                 /// -*=======*- GAMEPAD2 | MECCANISMI -*=======*-
 
                 // INTAKE & PALLE ALLA FLYWHEEL
@@ -462,8 +481,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             telemetry.addData("Intake Power", upIntakeMotor.getPower());
             telemetry.addData("Right Flywheel velocity",flywheel_right.getVelocity());
             telemetry.addData("Left Flywheel velocity", flywheel_left.getVelocity());
-            telemetry.addData("Uster Mode:", (usterMode) ? "Activated" : "You're a louser, press O");
+            telemetry.addData("Uster Mode:", (usterMode) ? "Activated" : "You're a louser, press O", "NON MI VOGLIONO ;%(");
             telemetry.addData("Full Control (God Mode)", (fullController) ? "You are now ADMIN" : "You are only CLAUDIO");
+            telemetry.addLine("APE PIAGGIO 1946-1967");
             telemetry.addData("Speed", (scale==1.0) ? 4 : (scale==0.75) ? 3 : (scale==0.5) ? 2 : (scale==0.25) ? 1 : "Folle");
             telemetry.addData("Climbing mode", (climbingMode) ? "Activated" : "OFF");
             telemetry.addData("Climbing velocity", climbVelocity);

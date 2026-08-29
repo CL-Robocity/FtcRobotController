@@ -80,7 +80,7 @@ public class TeleOpDrive_DEF extends LinearOpMode {
     private void handleClaudioMode() {
         // GUIDA (Gamepad 1)
         handleDrivetrainControls(gamepad1);
-        handleClimberControls(gamepad1, 0.25, 0.9, -0.25);
+        handleClimberControls(gamepad1, 0.2, 0.9, -0.5);
 
         if (gamepad1.b) {
             climber.stopSpeed();

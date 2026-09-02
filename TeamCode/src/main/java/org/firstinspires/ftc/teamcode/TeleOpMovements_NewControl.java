@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -14,13 +15,13 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * =========================================================================================
  *
  *       [L2] Marcia GIÙ (-25%)                                  [R2] Marcia SÙ (+25%)
- *       [L1] [God Mode] Outtake                                 [R1] [God Mode] Intake (Aspirazione)
+ *       [L1] Outtake                                            [R1] Intake (Aspirazione)
  *
  *              .---| DPAD |---.                                    .---| TASTI |---.
- *             /      .^.       \                                  /      (Y)        \  Y: [God Mode] Flywheel ON/OFF
- *            |     <     >      |                                |    (X)   (B)     | B: Toggle Uster / Arcade
+ *             /      .^.       \                                  /      (Y)        \  Y: Flywheel ON/OFF (in God Mode se master)
+ *            |     <     >      |                                |    (X)   (B)     | B: Toggle Uster / Arcade (SOLO Claudio Mode)
  *             \      'v'       /                                  \      (A)        /  X: Toggle Climbing
- *              '--------------'                                    '---------------'   A: [God Mode] Sparo Flywheel
+ *              '--------------'                                    '---------------'   A: Sparo Flywheel (in God Mode se master)
  *             ^: Climb Speed +0.1
  *             v: Climb Speed -0.1
  *
@@ -35,7 +36,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *
  *
  * -----------------------------------------------------------------------------------------
- *  [!] COMBO ADMIN: Premi [L3 + R3] insieme per alternare CLAUDIO MODE <-> GOD MODE
+ *  [!] COMBO ADMIN: Premi [L3 + R3] su GAMEPAD1 o GAMEPAD2 per attivare/disattivare GOD MODE.
+ *      Chi preme la combo diventa il "master" e assume il controllo TOTALE (guida, marce,
+ *      climbing, flywheel, intake, sparo, servo). L'altro controller resta disattivato.
+ *      La Uster Mode NON è disponibile in God Mode, solo in Claudio Mode.
  * =========================================================================================
  */
 
@@ -49,7 +53,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *
  *              .---| DPAD |---.                                    .---| TASTI |---.
  *             /      .^.       \                                  /      (Y)        \  Y: Toggle Flywheel (ON/OFF)
- *            |     <     >      |                                |    (X)   (B)     | B: ---
+ *            |     <     >      |                                |    (X)   (B)     | B: Toggle Servo (Aperto/Chiuso)
  *             \      'v'       /                                  \      (A)        /  X: ---
  *              '--------------'                                    '---------------'   A: Sparo (Apri Servitori + Intake)
  *                                                                                        *Attivo solo se RPM > 1800*
@@ -59,12 +63,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *                             | L-STICK|          | R-STICK|
  *                              \      /            \      /
  *                               '----'              '----'
- *                             (Non usato)         (Non usato)
+ *                          L3+R3: Attiva God Mode  (Non usato)
  * =========================================================================================
  */
 
 
-@TeleOp (name = "New Controller - FGC",group = "TeleOp Competition")
+@TeleOp (name = "noccapito quale usare -Zeno",group = "TeleOp Competition")
 public class TeleOpMovements_NewControl extends LinearOpMode {
     private final ElapsedTime timerServo = new ElapsedTime();
 
@@ -76,6 +80,10 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     // USE: UPDATE
     private int currentPower = 0;
     private final int maxStep = 16;
+
+    // USE: SERVO TOGGLE (gamepad2.b in Claudio Mode / master.b in God Mode)
+    boolean servoToggleOpen = false; // stato del toggle servo (true = aperto, false = chiuso)
+    boolean bStateBeforeServo = false; // stato precedente del tasto cerchio per rilevare il click
 
     // USE: COSTANTI / VARIABILI con valore predefinito
     private static final int TARGET_VELOCITY = 2000;
@@ -92,14 +100,15 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     double leftPower;
     double rightPower;
 
-    // USE: TOGGLE USTER MODE
-    boolean bStateBefore = false;
+    // USE: TOGGLE USTER MODE (SOLO Claudio Mode, gamepad1.b)
+    boolean bStateBeforeUster = false;
     boolean usterMode = false;
 
-    // USE: COMBO
-    boolean comboStateBefore = false;
-    boolean comboStateActual = false;
+    // USE: COMBO (attivabile da entrambi i gamepad)
+    boolean combo1StateBefore = false;
+    boolean combo2StateBefore = false;
     boolean fullController = false;
+    boolean masterIsGamepad1 = true; // quale gamepad ha attivato il God Mode
 
     // USE: MARCE
     boolean lastRightTrigger = false;
@@ -183,47 +192,44 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         waitForStart();
         while (opModeIsActive()){
 
-            /// -*=======*- COMBO -*=======*-
+            /// -*=======*- COMBO (da entrambi i gamepad) -*=======*-
 
-            comboStateActual = gamepad1.left_stick_button && gamepad1.right_stick_button;
+            boolean combo1Actual = gamepad1.left_stick_button && gamepad1.right_stick_button;
+            boolean combo2Actual = gamepad2.left_stick_button && gamepad2.right_stick_button;
 
-            if (comboStateActual && !comboStateBefore){
+            if (combo1Actual && !combo1StateBefore){
                 fullController = !fullController;
+                if (fullController) masterIsGamepad1 = true;
             }
 
-            comboStateBefore = comboStateActual;
+            if (combo2Actual && !combo2StateBefore){
+                fullController = !fullController;
+                if (fullController) masterIsGamepad1 = false;
+            }
 
-            if (fullController){ /// GOD/ADMIN mode acctivated
+            combo1StateBefore = combo1Actual;
+            combo2StateBefore = combo2Actual;
 
-                // MOVIMENTO
+            if (fullController){ /// GOD/ADMIN mode attivata - il gamepad "master" controlla TUTTO
 
-                boolean bStateActual = gamepad1.b;
+                Gamepad master = masterIsGamepad1 ? gamepad1 : gamepad2;
 
-                if (bStateActual && !bStateBefore){
-                    usterMode = !usterMode;
+                // MOVIMENTO (solo Arcade, niente Uster Mode in God Mode)
+
+                double throttle = -master.left_stick_y;
+                double spin = master.right_stick_x;
+                leftPower = throttle + spin;
+                rightPower = throttle - spin;
+                double max = Math.max(Math.abs(leftPower),Math.abs(rightPower));
+                if (max>1.0){
+                    leftPower /= max;
+                    rightPower /= max;
                 }
-
-                bStateBefore = bStateActual;
-
-                if (usterMode){
-                    leftPower = -gamepad1.left_stick_y;
-                    rightPower = -gamepad1.right_stick_y;
-                } else {
-                    double throttle = -gamepad1.left_stick_y;
-                    double spin = gamepad1.right_stick_x;
-                    leftPower = throttle + spin;
-                    rightPower = throttle - spin;
-                    double max = Math.max(Math.abs(leftPower),Math.abs(rightPower));
-                    if (max>1.0){
-                        leftPower /= max;
-                        rightPower /= max;
-                    }
-                }
-
-                boolean currentRightTrigger = gamepad1.right_trigger_pressed;
-                boolean currentLeftTrigger = gamepad1.left_trigger_pressed;
 
                 // MARCE
+
+                boolean currentRightTrigger = master.right_trigger > 0.5;
+                boolean currentLeftTrigger = master.left_trigger > 0.5;
 
                 if (currentRightTrigger && !lastRightTrigger) {
                     if (scale < 1.0) {
@@ -247,37 +253,44 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 leftMotor.setPower(leftPower);
                 rightMotor.setPower(rightPower);
 
-                // INTAKE & PALLE ALLA FLYWHEEL
+                // INTAKE, SPARO & TOGGLE SERVO
 
-                if (gamepad1.a && flywheel_left.getVelocity() > 1800 ) {
+                boolean bStateActualServo = master.b;
+
+                if (bStateActualServo && !bStateBeforeServo){
+                    servoToggleOpen = !servoToggleOpen;
+                }
+
+                bStateBeforeServo = bStateActualServo;
+
+                if (master.a && flywheel_left.getVelocity() > 1800 ) {
                     servitoreRight.setPosition(SERVO_OPEN);
                     servitoreLeft.setPosition(SERVO_OPEN);
                     upIntakeMotor.setPower(-1);
                     upIntakeSlowMotor.setPower(-1);
                 }
-
-                else if (gamepad1.right_bumper) {
-                    servitoreRight.setPosition(SERVO_CLOSE);
-                    servitoreLeft.setPosition(SERVO_CLOSE);
+                else if (master.right_bumper) {
+                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
                     upIntakeMotor.setPower(-1);
                     upIntakeSlowMotor.setPower(0);
                 }
-                else if (gamepad1.left_bumper) {
-                    servitoreRight.setPosition(SERVO_CLOSE);
-                    servitoreLeft.setPosition(SERVO_CLOSE);
+                else if (master.left_bumper) {
+                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
                     upIntakeMotor.setPower(1);
                     upIntakeSlowMotor.setPower(1);
                 }
                 else {
-                    servitoreRight.setPosition(SERVO_CLOSE);
-                    servitoreLeft.setPosition(SERVO_CLOSE);
+                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
                     upIntakeMotor.setPower(0);
                     upIntakeSlowMotor.setPower(0);
                 }
 
                 // FLYWHEEL
 
-                boolean yStateActual = gamepad1.y;
+                boolean yStateActual = master.y;
 
                 if (yStateActual && !yStateBefore){
                     flywheelActivate = !flywheelActivate;
@@ -297,7 +310,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 // CLIMBING
 
-                boolean xStateActual = gamepad1.x;
+                boolean xStateActual = master.x;
 
                 if (xStateActual && !xStateBefore){
                     climbingMode = !climbingMode;
@@ -311,8 +324,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                     climbMotor.setPower(0);
                 }
 
-                boolean currentUpDpad = gamepad1.dpad_up;
-                boolean currentDownDpad = gamepad1.dpad_down;
+                boolean currentUpDpad = master.dpad_up;
+                boolean currentDownDpad = master.dpad_down;
 
                 if (currentUpDpad && !lastUpDpad){
                     climbVelocity+=.1;
@@ -331,13 +344,13 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 // GUIDA
 
-                boolean bStateActual = gamepad1.b;
+                boolean bStateActualUster = gamepad1.b;
 
-                if (bStateActual && !bStateBefore){
+                if (bStateActualUster && !bStateBeforeUster){
                     usterMode = !usterMode;
                 }
 
-                bStateBefore = bStateActual;
+                bStateBeforeUster = bStateActualUster;
 
                 if (usterMode){
                     leftPower = -gamepad1.left_stick_y;
@@ -405,6 +418,16 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 /// -*=======*- GAMEPAD2 | MECCANISMI -*=======*-
 
+                // TOGGLE SERVO CON CERCHIO (gamepad2.b) - APERTO/CHIUSO
+
+                boolean bStateActualServo = gamepad2.b;
+
+                if (bStateActualServo && !bStateBeforeServo){
+                    servoToggleOpen = !servoToggleOpen;
+                }
+
+                bStateBeforeServo = bStateActualServo;
+
                 // INTAKE & PALLE ALLA FLYWHEEL
 
                 if (gamepad2.a && flywheel_left.getVelocity() > 1800) {
@@ -414,20 +437,20 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                     upIntakeSlowMotor.setPower(-1);
                 }
                 else if (gamepad2.right_bumper) {
-                    servitoreRight.setPosition(SERVO_CLOSE);
-                    servitoreLeft.setPosition(SERVO_CLOSE);
+                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
                     upIntakeMotor.setPower(-1);
                     upIntakeSlowMotor.setPower(0);
                 }
                 else if (gamepad2.left_bumper) {
-                    servitoreRight.setPosition(SERVO_CLOSE);
-                    servitoreLeft.setPosition(SERVO_CLOSE);
+                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
                     upIntakeMotor.setPower(1);
                     upIntakeSlowMotor.setPower(1);
                 }
                 else {
-                    servitoreRight.setPosition(SERVO_CLOSE);
-                    servitoreLeft.setPosition(SERVO_CLOSE);
+                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
                     upIntakeMotor.setPower(0);
                     upIntakeSlowMotor.setPower(0);
                 }
@@ -453,6 +476,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 }
             }
 
+
+
+
             // A SUMMARY FOR THE DRIVER
             telemetry.addData("Status", "Running");
             telemetry.addData("Left POWER", leftPower);
@@ -462,8 +488,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             telemetry.addData("Intake Power", upIntakeMotor.getPower());
             telemetry.addData("Right Flywheel velocity",flywheel_right.getVelocity());
             telemetry.addData("Left Flywheel velocity", flywheel_left.getVelocity());
-            telemetry.addData("Uster Mode:", (usterMode) ? "Activated" : "You're a louser, press O");
-            telemetry.addData("Full Control (God Mode)", (fullController) ? "You are now ADMIN" : "You are only CLAUDIO");
+            telemetry.addData("Servo toggle state", (servoToggleOpen) ? "OPEN" : "CLOSE");
+            telemetry.addData("Uster Mode:", (usterMode) ? "Activated" : "You're a louser, press B (solo Claudio Mode)");
+            telemetry.addData("Full Control (God Mode)", (fullController) ? ("You are now ADMIN - Master: Gamepad" + (masterIsGamepad1 ? "1" : "2")) : "You are only CLAUDIO");
             telemetry.addData("Speed", (scale==1.0) ? 4 : (scale==0.75) ? 3 : (scale==0.5) ? 2 : (scale==0.25) ? 1 : "Folle");
             telemetry.addData("Climbing mode", (climbingMode) ? "Activated" : "OFF");
             telemetry.addData("Climbing velocity", climbVelocity);

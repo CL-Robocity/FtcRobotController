@@ -21,6 +21,7 @@ public class TeleOpDrive_DEF extends LinearOpMode {
     // STATI COMBO E MODALITÀ
     private boolean fullController = false;
     private boolean usterMode = false;
+    private boolean bStateBefore = false;
 
     // VARIABILI PER RILEVAMENTO PRESSIONE (RISING EDGE)
     private boolean lastCombo = false;
@@ -70,7 +71,7 @@ public class TeleOpDrive_DEF extends LinearOpMode {
     private void handleGodMode() {
         // GUIDA (Gamepad 1)
         handleDrivetrainControls(gamepad1);
-        handleClimberControls(gamepad1, 0.2, 0.9, -0.5);
+        handleClimberControls(gamepad1, 0.2, 0.9, -0.4);
 
         // MECCANISMI (Gamepad 1)
         handleIntakeControls(gamepad1, gamepad1.a);
@@ -92,6 +93,12 @@ public class TeleOpDrive_DEF extends LinearOpMode {
     }
 
     private void handleDrivetrainControls(Gamepad gamepad) {
+        boolean currentBState = gamepad1.b;
+        if (currentBState && !bStateBefore){
+            usterMode = !usterMode;
+        }
+        bStateBefore = currentBState;
+
         if (usterMode) {
             drivetrain.driveTank(-gamepad.left_stick_y, -gamepad.right_stick_y);
         } else {
@@ -155,7 +162,7 @@ public class TeleOpDrive_DEF extends LinearOpMode {
         telemetry.addData("Intake Power", intake.getPower());
         telemetry.addData("Flywheel Velocity Left", flywheel.getLeftVelocity());
         telemetry.addData("Flywheel Velocity Right", flywheel.getRightVelocity());
-        telemetry.addData("Full Control (God Mode)", fullController ? "ADMIN" : "CLAUDIO");
+        telemetry.addData("Full Control (God Mode)", fullController ? "you are now ADMIN" : "you are only claudio CLAUDIO");
         telemetry.addData("Speed Scale", drivetrain.getScale());
         telemetry.addLine("APE PIAGGIO 1946-1967");
         telemetry.addData("Climbing Mode", climber.isClimbing() ? "ON" : "OFF");

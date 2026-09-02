@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 public class Climber {
     private DcMotor climbMotorInt, climbMotorEst;
     private boolean climbingMode = false;
-    private double climbVelocity = 0.5;
+    private double climbVelocity = 0;
 
     public void init(HardwareMap hardwareMap) {
         climbMotorInt = hardwareMap.get(DcMotor.class, "climb_motor_int");

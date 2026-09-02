@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -76,14 +77,15 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     private final int maxStep = 16;
 
     // USE: COSTANTI / VARIABILI con valore predefinito
-    private static final int TARGET_VELOCITY = 1800;
-    private static final double SERVO_CLOSE = 0.04;
+    private int TARGET_VELOCITY = 1800;
+    private int IDLE_VELOCITY = 900;
+    private static final double SERVO_CLOSE = -0.02;
     private static final double SERVO_OPEN = 0.12;
     double scale = 0.75;
     double climbVelocity = 0.5;
 
     // USE: FLYWHEEL
-    boolean flywheelActivate = false;
+    boolean flywheelIdleActivated = false;
     boolean yStateBefore = false;
 
     // USE: MOTORS
@@ -108,6 +110,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean climbingMode = false;
     boolean lastUpDpad = false;
     boolean lastDownDpad = false;
+    boolean xStateBeforeG2 = false;
+    boolean flywheelFullSpeed = false;
 
     @Override
     public void runOpMode() throws InterruptedException{
@@ -141,8 +145,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         servitoreRight.setDirection(Servo.Direction.REVERSE);
         servitoreLeft.setDirection(Servo.Direction.FORWARD);
 
-        climbMotorInt.setDirection(DcMotor.Direction.FORWARD);
-        climbMotorEst.setDirection(DcMotor.Direction.FORWARD);
+        climbMotorInt.setDirection(DcMotor.Direction.REVERSE);
+        climbMotorEst.setDirection(DcMotor.Direction.REVERSE);
 
         /// RESETTING THE ENCODER
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -253,7 +257,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 // INTAKE & PALLE ALLA FLYWHEEL
 
-                if (gamepad1.a && flywheel_left.getVelocity() > 1800 ) {
+                if (gamepad1.a && flywheel_left.getVelocity() > 1400 ) {
                     servitoreRight.setPosition(SERVO_OPEN);
                     servitoreLeft.setPosition(SERVO_OPEN);
                     upIntakeMotor.setPower(-1);
@@ -284,12 +288,12 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 boolean yStateActual = gamepad1.y;
 
                 if (yStateActual && !yStateBefore){
-                    flywheelActivate = !flywheelActivate;
+                    flywheelIdleActivated = !flywheelIdleActivated;
                 }
 
                 yStateBefore = yStateActual;
 
-                if (flywheelActivate){
+                if (flywheelIdleActivated){
                     int filteredTargetVelocity = update(TARGET_VELOCITY);
                     flywheel_right.setVelocity(filteredTargetVelocity);
                     flywheel_left.setVelocity(filteredTargetVelocity);
@@ -338,12 +342,12 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 // GUIDA
 
                 boolean bStateActual = gamepad1.b;
-/*
+
                 if (bStateActual && !bStateBefore){
                     usterMode = !usterMode;
                 }
-*/
-                //bStateBefore = bStateActual;
+
+                bStateBefore = bStateActual;
 
                 if (usterMode){
                     leftPower = -gamepad1.left_stick_y;
@@ -403,17 +407,18 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 } else {
                     climbMotorInt.setPower(0);
                     climbMotorEst.setPower(0);
+                    climbVelocity=0;
                 }
 
                 boolean currentUpDpad = gamepad1.dpad_up;
                 boolean currentDownDpad = gamepad1.dpad_down;
 
-                if (currentUpDpad && !lastUpDpad && climbVelocity < 0.9){
-                    climbVelocity+=.25;
+                if (currentUpDpad && !lastUpDpad && climbVelocity < 1.0){
+                    climbVelocity+=.2;
                 }
 
-                if (currentDownDpad && !lastDownDpad && climbVelocity > -0.25){
-                    climbVelocity-=.25;
+                if (currentDownDpad && !lastDownDpad && climbVelocity > -0.4){
+                    climbVelocity-=0.2;
                 }
 
                 lastDownDpad = currentDownDpad;
@@ -426,7 +431,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 // INTAKE & PALLE ALLA FLYWHEEL
 
-                if (gamepad2.a && flywheel_left.getVelocity() > 1800) {
+                if (gamepad2.a && flywheel_left.getVelocity() > 1400) {
                     servitoreRight.setPosition(SERVO_OPEN);
                     servitoreLeft.setPosition(SERVO_OPEN);
                     upIntakeMotor.setPower(-1);
@@ -453,20 +458,36 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 // FLYWHEEL
 
-                boolean yStateActual = gamepad2.y;
-
-                if (yStateActual && !yStateBefore){
-                    flywheelActivate = !flywheelActivate;
+                if (gamepad2.dpad_up && flywheel_right.getVelocity()<100) {
+                    servitoreRight.setPosition(SERVO_OPEN);
+                    servitoreLeft.setPosition(SERVO_OPEN);
+                    flywheel_left.setVelocity(-500);
+                    flywheel_right.setVelocity(-500);
                 }
 
+                boolean yStateActual = gamepad2.y;
+                boolean xStateActualG2 = gamepad2.x;
+
+                if (xStateActualG2 && xStateBeforeG2){
+                    flywheelFullSpeed = !flywheelFullSpeed;
+                }
+                xStateBeforeG2 = !xStateActualG2;
+
+                if (yStateActual && !yStateBefore){
+                    flywheelIdleActivated = !flywheelIdleActivated;
+                }
                 yStateBefore = yStateActual;
 
-                if (flywheelActivate){
-                    int filteredTargetVelocity = update(TARGET_VELOCITY);
-                    flywheel_right.setVelocity(filteredTargetVelocity);
-                    flywheel_left.setVelocity(filteredTargetVelocity);
+                if (flywheelFullSpeed) {
+                    int filteredFullVelocity = update(TARGET_VELOCITY);
+                    flywheel_right.setVelocity(filteredFullVelocity);
+                    flywheel_left.setVelocity(filteredFullVelocity);
 
-                } else {
+                } else if (flywheelIdleActivated){
+                    flywheel_right.setVelocity(IDLE_VELOCITY);
+                    flywheel_left.setVelocity(IDLE_VELOCITY);
+
+                } else if (!gamepad2.dpad_up){
                     flywheel_right.setVelocity(0);
                     flywheel_left.setVelocity(0);
                 }

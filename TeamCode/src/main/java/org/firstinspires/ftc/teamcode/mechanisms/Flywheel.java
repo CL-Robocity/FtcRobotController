@@ -41,9 +41,9 @@ public class Flywheel {
             flywheelLeft.setVelocity(currentVelocity);
             flywheelRight.setVelocity(currentVelocity);
         } else {
-            currentVelocity = 0;
-            flywheelLeft.setVelocity(0);
-            flywheelRight.setVelocity(0);
+            currentVelocity = 500;
+            flywheelLeft.setVelocity(500);
+            flywheelRight.setVelocity(500);
         }
     }
 

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+/*package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -141,7 +141,7 @@ public class TeleOpMovements extends LinearOpMode {
             }
 
 
-            package org.firstinspires.ftc.teamcode;
+            //package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -375,7 +375,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
                 CRServoLeft.setPower(0);
                 CRServoRight.setPower(0);
             }
-*/
+
                         // A SUMMARY FOR THE DRIVER
                         telemetry.addData("Status", "Running");
                         telemetry.addData("Left POWER", leftPower);
@@ -483,7 +483,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
                 CRServoLeft.setPower(0);
                 CRServoRight.setPower(0);
             }
-*/
+
             // A SUMMARY FOR THE DRIVER
             telemetry.addData("Status", "Running");
             telemetry.addData("Left POWER", leftPower);
@@ -511,3 +511,4 @@ import com.qualcomm.robotcore.util.ElapsedTime;
         return currentPower;
     }
 }
+*/

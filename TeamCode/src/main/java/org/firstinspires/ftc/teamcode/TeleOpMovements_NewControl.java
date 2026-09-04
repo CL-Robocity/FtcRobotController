@@ -15,10 +15,8 @@ prima prova slider
 SOFTWARE
 aggiunta controllo unico prima dello sparo a 1700 giri
 implementazione di tutte le funzioni sia su godmode che su claudiomode
- */
 
-/*programma refactorizzato 4/9/26 (v2)
-SOFTWARE
+PROGRAMMMA REFACTORIZZATO
 La logica di meccanismi, climbing e guida era duplicata quasi identica tra Claudio Mode
 e God Mode: due copie della stessa cosa che dovevano essere tenute manualmente allineate
 (fonte di bug quando si modificava una copia e ci si dimenticava dell'altra).

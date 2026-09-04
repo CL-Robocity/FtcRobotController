@@ -182,3 +182,146 @@ In God Mode la Uster Mode è esclusa di proposito, si guida solo in Arcade. Il m
 All toggles (Uster, Climbing, Flywheel Idle, Flywheel Full Speed, Servo, God Mode) use standard edge detection: they fire once per press, no flickering if the button stays held.
 
 Uster Mode is intentionally left out of God Mode, driving is Arcade-only there. The God Mode mechanism mapping was chosen to avoid overlapping with the drive/climbing controls already on gamepad1; if a different mapping is needed, just search for `master.` references in the code.
+
+---
+---
+
+# V2 - Aggiornamenti
+
+Questa sezione descrive cosa e' cambiato rispetto alla versione precedente del documento (sopra). Il testo v1 resta com'era per riferimento storico; qui sotto solo le differenze e le novita'.
+
+# V2 - Updates
+
+This section describes what changed compared to the previous version of this document (above). The v1 text stays as-is for historical reference; below are only the differences and new features.
+
+---
+
+## Novita' principali / Main changes
+
+Italiano:
+
+- Aggiunto un controllo unico di velocita' prima dello sparo: la variabile `velocityok` diventa vera solo quando entrambi i flywheel superano 1700 RPM con il Full Speed attivo, e resta vera finche' il Full Speed non viene disattivato. Lo sparo (tasto A) ora richiede `velocityok`, non piu' una soglia diretta sul singolo motore.
+- Lo sparo ora porta i servo su `SERVO_SHOOT` (0.12) invece di `SERVO_OPEN`, e la potenza dell'intake durante lo sparo e' -0.8 invece di -1.
+- Tenendo premuto outtake (left bumper), oltre a invertire l'intake, il flywheel viene spinto a -500 per aiutare a liberare palline incastrate. Questo vale ora sia in Claudio Mode che in God Mode.
+- I tasti per Idle e Full Speed del flywheel sono stati scambiati: ora Y attiva/disattiva il Full Speed e X (in Claudio Mode) o D-pad sinistra (in God Mode) attiva/disattiva l'Idle. In God Mode X resta occupato dal Climbing, per questo li' l'Idle e' su D-pad sinistra invece che su X.
+- La funzione di Eject (che spingeva il flywheel a -500 con D-pad su/destra quando quasi fermo) e' stata rimossa in entrambe le modalita'.
+- `SERVO_OPEN` e' stato modificato da 0.22 a 0.17.
+- Aggiunta una riga di telemetria "Velocity OK" per vedere a colpo d'occhio se lo sparo e' abilitato.
+
+English:
+
+- Added a single velocity check before shooting: the `velocityok` variable becomes true only when both flywheels exceed 1700 RPM with Full Speed active, and stays true until Full Speed is turned off. Shooting (A button) now requires `velocityok`, instead of a direct threshold on a single motor.
+- Shooting now moves the servos to `SERVO_SHOOT` (0.12) instead of `SERVO_OPEN`, and intake power during shooting is -0.8 instead of -1.
+- Holding outtake (left bumper), besides reversing the intake, now also pushes the flywheel to -500 to help clear jammed balls. This now applies to both Claudio Mode and God Mode.
+- The Idle and Full Speed flywheel buttons were swapped: Y now toggles Full Speed, and X (Claudio Mode) or D-pad left (God Mode) toggles Idle. In God Mode, X is still used for Climbing, which is why Idle was moved to D-pad left there.
+- The Eject function (which pushed the flywheel to -500 via D-pad up/right when nearly stopped) has been removed in both modes.
+- `SERVO_OPEN` was changed from 0.22 to 0.17.
+- Added a "Velocity OK" telemetry line to see at a glance whether shooting is enabled.
+
+---
+
+## Tasti aggiornati - Claudio Mode, Gamepad2 (meccanismi) / Updated buttons - Claudio Mode, Gamepad2 (mechanisms)
+
+Italiano:
+
+- A (croce): sparo, apre i servo su SERVO_SHOOT e attiva l'intake a -0.8 (solo se `velocityok` e' vera)
+- B (cerchio): toggle servo aperto/chiuso
+- X (quadrato): toggle flywheel idle (900 RPM)
+- Y (triangolo): toggle flywheel full speed (2000 RPM)
+- R1: intake
+- L1: outtake, spinge anche il flywheel a -500
+- Eject rimosso (non piu' presente su D-pad)
+
+English:
+
+- A (cross): shoot, moves the servos to SERVO_SHOOT and runs intake at -0.8 (only if `velocityok` is true)
+- B (circle): toggle servo open/closed
+- X (square): toggle flywheel idle (900 RPM)
+- Y (triangle): toggle flywheel full speed (2000 RPM)
+- R1: intake
+- L1: outtake, also pushes the flywheel to -500
+- Eject removed (no longer on D-pad)
+
+---
+
+## Tasti aggiornati - God Mode (gamepad master) / Updated buttons - God Mode (master gamepad)
+
+Italiano:
+
+- A: sparo, stessa logica di Claudio Mode (richiede `velocityok`)
+- B: toggle servo aperto/chiuso
+- X: toggle Climbing Mode (invariato)
+- Y: toggle flywheel full speed
+- D-pad sinistra: toggle flywheel idle
+- D-pad su/giu: regola velocita' di climbing (invariato)
+- L1: outtake, spinge anche il flywheel a -500
+- R1: intake
+- Eject rimosso (non piu' presente su D-pad destra)
+
+English:
+
+- A: shoot, same logic as Claudio Mode (requires `velocityok`)
+- B: toggle servo open/closed
+- X: toggle Climbing Mode (unchanged)
+- Y: toggle flywheel full speed
+- D-pad left: toggle flywheel idle
+- D-pad up/down: adjust climb speed (unchanged)
+- L1: outtake, also pushes the flywheel to -500
+- R1: intake
+- Eject removed (no longer on D-pad right)
+
+---
+
+## Logica del flywheel aggiornata / Updated flywheel logic
+
+Italiano:
+
+Le priorita' restano le stesse (Full Speed > Idle > spento), ma con due differenze:
+
+- Quando ne' Full Speed ne' Idle sono attivi, il flywheel va a 0 a meno che si stia tenendo premuto outtake, nel qual caso resta a -500 (invece che essere subito sovrascritto a 0).
+- Lo sparo non guarda piu' la velocita' istantanea al momento della pressione di A, ma la variabile `velocityok`, calcolata ogni ciclo prima del controllo dei tasti: si azzera appena il Full Speed si spegne, e diventa vera (restando tale) quando entrambi i motori superano 1700 RPM.
+
+English:
+
+The priority order stays the same (Full Speed > Idle > off), with two differences:
+
+- When neither Full Speed nor Idle is active, the flywheel goes to 0 unless outtake is being held, in which case it stays at -500 (instead of being immediately overwritten to 0).
+- Shooting no longer checks the instantaneous velocity at the moment A is pressed; instead it checks the `velocityok` variable, computed every loop before reading the buttons: it resets to false as soon as Full Speed is turned off, and becomes true (and stays true) once both motors exceed 1700 RPM.
+
+---
+
+## Refactoring del codice / Code refactoring
+
+Italiano:
+
+La struttura interna del programma e' stata riorganizzata per eliminare la duplicazione tra Claudio Mode e God Mode. Prima, guida, climbing e meccanismi erano scritti due volte (una copia per modalita'), con il rischio di modificare una copia e dimenticare l'altra. Ora la logica vive in metodi condivisi, richiamati da entrambe le modalita':
+
+- `driveArcade(throttle, spin)`: calcola le potenze motore per la guida Arcade.
+- `applyGearAndDrive(Gamepad g)`: gestisce il cambio marcia e invia la potenza ai motori di trazione.
+- `handleClimbing(Gamepad g)`: gestisce il toggle Climbing e la regolazione della sua velocita'. Stessi tasti in entrambe le modalita' (X, D-pad su/giu), quindi basta passare il gamepad giusto.
+- `handleMechanisms(...)`: gestisce servo, sparo, intake/outtake e flywheel. Non riceve un gamepad intero ma i singoli tasti gia' letti dal chiamante, perche' Idle e Full Speed usano tasti diversi tra le due modalita' (per evitare conflitti in God Mode, dove climbing e meccanismi condividono lo stesso gamepad).
+
+Nel loop principale, due variabili (`driver` e `operator`) puntano al gamepad giusto a seconda della modalita' attiva; le chiamate ai metodi condivisi restano identiche, cambia solo quale gamepad fisico viene passato.
+
+Comportamento a runtime: nessuna modifica rispetto a prima del refactoring, a parita' di funzionalita' descritte sopra. Cambia solo l'organizzazione interna del codice, per rendere piu' facile mantenere le due modalita' allineate in futuro.
+
+English:
+
+The program's internal structure was reorganized to eliminate duplication between Claudio Mode and God Mode. Previously, driving, climbing and mechanisms were each written twice (one copy per mode), risking that one copy gets updated while the other is forgotten. Now the logic lives in shared methods, called by both modes:
+
+- `driveArcade(throttle, spin)`: computes motor power for Arcade driving.
+- `applyGearAndDrive(Gamepad g)`: handles gear shifting and sends power to the drive motors.
+- `handleClimbing(Gamepad g)`: handles the Climbing toggle and speed adjustment. Same buttons in both modes (X, D-pad up/down), so it just needs the right gamepad passed in.
+- `handleMechanisms(...)`: handles servo, shooting, intake/outtake and the flywheel. It doesn't take a whole gamepad, but individual button values already read by the caller, because Idle and Full Speed use different buttons between the two modes (to avoid conflicts in God Mode, where climbing and mechanisms share the same gamepad).
+
+In the main loop, two variables (`driver` and `operator`) point to the correct gamepad depending on the active mode; calls to the shared methods stay identical, only which physical gamepad gets passed in changes.
+
+Runtime behavior: unchanged compared to before the refactor, given the same features described above. Only the internal code organization changes, to make it easier to keep the two modes in sync going forward.
+
+---
+
+## Costanti aggiornate / Updated constants
+
+- SERVO_OPEN = 0.17 (era 0.22 / was 0.22)
+- SERVO_SHOOT = 0.12 (nuova costante, usata solo durante lo sparo / new constant, used only while shooting)
+- TARGET_VELOCITY, IDLE_VELOCITY, SERVO_CLOSE, maxStep: invariati / unchanged

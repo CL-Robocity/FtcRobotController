@@ -17,6 +17,17 @@ aggiunta controllo unico prima dello sparo a 1700 giri
 implementazione di tutte le funzioni sia su godmode che su claudiomode
  */
 
+/*programma refactorizzato 4/9/26 (v2)
+SOFTWARE
+La logica di meccanismi, climbing e guida era duplicata quasi identica tra Claudio Mode
+e God Mode: due copie della stessa cosa che dovevano essere tenute manualmente allineate
+(fonte di bug quando si modificava una copia e ci si dimenticava dell'altra).
+Ora la logica vive in metodi unici (handleMechanisms, handleClimbing, driveArcade,
+applyGearAndDrive), chiamati sia da Claudio Mode che da God Mode passando i tasti giusti
+per ciascuna modalità. Il comportamento a runtime non cambia, cambia solo come è organizzato
+il codice. Vedi i commenti nella sezione "METODI CONDIVISI" più sotto per i dettagli.
+ */
+
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -86,7 +97,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 
 
-@TeleOp (name = "noccapito quale usare -Zeno",group = "TeleOp Competition")
+@TeleOp (name = "testmodificheuniche",group = "TeleOp Competition")
 public class TeleOpMovements_NewControl extends LinearOpMode {
     private final ElapsedTime timerServo = new ElapsedTime();
 
@@ -96,13 +107,13 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     private DcMotorEx flywheel_left, flywheel_right;
     private Servo servitoreRight, servitoreLeft;
 
-    // USE: UPDATE
+    // USE: UPDATE (rampa di velocità per il flywheel, vedi metodo update() in fondo al file)
     private int currentPower = 0;
     private final int maxStep = 16;
 
-    // USE: SERVO TOGGLE (gamepad2.b in Claudio Mode / master.b in God Mode)
+    // USE: SERVO TOGGLE (tasto B: gamepad2 in Claudio Mode / master in God Mode)
     boolean servoToggleOpen = false; // stato del toggle servo (true = aperto, false = chiuso)
-    boolean bStateBeforeServo = false; // stato precedente del tasto cerchio per rilevare il click
+    boolean bStateBeforeServo = false; // stato precedente del tasto per rilevare il click (edge detection)
 
     // USE: COSTANTI / VARIABILI con valore predefinito
     private static final int TARGET_VELOCITY = 2000;
@@ -116,11 +127,10 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
     // USE: FLYWHEEL
     boolean flywheelActivate = false;  // toggle Idle (X in Claudio / dpad_left in God Mode)
-    boolean yStateBefore = false;
-    boolean flywheelFullSpeed = false; // toggle Full Speed (Y in Claudio / Y in God Mode)
-    boolean xStateBeforeG2 = false;
-    boolean dpadLeftBeforeMaster = false;
-    boolean velocityok = false;
+    boolean yStateBefore = false;      // edge detection per il toggle Full Speed (condiviso tra le due modalità)
+    boolean flywheelFullSpeed = false; // toggle Full Speed (Y in entrambe le modalità)
+    boolean xStateBeforeG2 = false;    // edge detection per il toggle Idle (condiviso tra le due modalità)
+    boolean velocityok = false;        // true quando entrambi i flywheel sono a regime (>1700) con Full Speed attivo
 
 
     // USE: MOTORS
@@ -232,6 +242,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         while (opModeIsActive()){
 
             /// -*=======*- COMBO (da entrambi i gamepad) -*=======*-
+            // L3+R3 su un gamepad attiva il God Mode e lo rende "master".
+            // L3+R3 su un gamepad (uno qualsiasi) mentre il God Mode è attivo lo disattiva.
 
             boolean combo1Actual = gamepad1.left_stick_button && gamepad1.right_stick_button;
             boolean combo2Actual = gamepad2.left_stick_button && gamepad2.right_stick_button;
@@ -249,336 +261,74 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             combo1StateBefore = combo1Actual;
             combo2StateBefore = combo2Actual;
 
-            if (fullController){ /// GOD/ADMIN mode attivata - il gamepad "master" controlla TUTTO
+            // -*=======*- SCELTA DEL GAMEPAD ATTIVO -*=======*-
+            // "driver" è il gamepad che guida il robot in questo ciclo:
+            //   - in God Mode è il master (unico gamepad che comanda tutto)
+            //   - in Claudio Mode è sempre gamepad1
+            // "operator" è il gamepad che comanda i meccanismi in questo ciclo:
+            //   - in God Mode è di nuovo il master (stesso gamepad fa tutto)
+            //   - in Claudio Mode è sempre gamepad2
+            // Grazie a questa astrazione, handleMechanisms() e handleClimbing() vengono
+            // chiamati UNA SOLA VOLTA a riga di codice, sia che si sia in God Mode che in
+            // Claudio Mode: cambia solo quale gamepad fisico viene passato come parametro.
 
-                Gamepad master = masterIsGamepad1 ? gamepad1 : gamepad2;
+            Gamepad master = masterIsGamepad1 ? gamepad1 : gamepad2;
+            Gamepad driver = fullController ? master : gamepad1;
+            Gamepad operator = fullController ? master : gamepad2;
 
-                // MOVIMENTO (solo Arcade, niente Uster Mode in God Mode)
+            // -*=======*- GUIDA -*=======*-
+            // La Uster Mode (doppio stick stile tank) esiste SOLO in Claudio Mode.
+            // In God Mode si guida sempre in Arcade con il gamepad master.
 
-                double throttle = -master.left_stick_y;
-                double spin = master.right_stick_x;
-                leftPower = throttle + spin;
-                rightPower = throttle - spin;
-                double max = Math.max(Math.abs(leftPower),Math.abs(rightPower));
-                if (max>1.0){
-                    leftPower /= max;
-                    rightPower /= max;
-                }
-
-                // MARCE
-
-                boolean currentRightTrigger = master.right_trigger > 0.5;
-                boolean currentLeftTrigger = master.left_trigger > 0.5;
-
-                if (currentRightTrigger && !lastRightTrigger) {
-                    if (scale < 1.0) {
-                        scale += 0.25;
-                    }
-                }
-
-                if (currentLeftTrigger && !lastLeftTrigger) {
-                    if (scale > 0.25) {
-                        scale -= 0.25;
-                    }
-                }
-
-                lastRightTrigger = currentRightTrigger;
-                lastLeftTrigger = currentLeftTrigger;
-
-
-                leftPower *= scale;
-                rightPower *= scale;
-
-                leftMotor.setPower(leftPower);
-                rightMotor.setPower(rightPower);
-
-                // INTAKE, SPARO & TOGGLE SERVO
-
-                boolean bStateActualServo = master.b;
-
-                if (bStateActualServo && !bStateBeforeServo){
-                    servoToggleOpen = !servoToggleOpen;
-                }
-                //aggiunta
-                if (!flywheelFullSpeed){
-                    velocityok=false;
-                }
-
-                if (flywheel_right.getVelocity() > 1700 && flywheel_left.getVelocity() > 1700 && flywheelFullSpeed){
-                    velocityok=true;
-                }
-
-                bStateBeforeServo = bStateActualServo;
-
-                if (master.a && velocityok) {
-                    servitoreRight.setPosition(SERVO_SHOOT);
-                    servitoreLeft.setPosition(SERVO_SHOOT);
-                    upIntakeMotor.setPower(-0.8);
-                    upIntakeSlowMotor.setPower(-0.8);
-                }
-                else if (master.right_bumper) {
-                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    upIntakeMotor.setPower(-1);
-                    upIntakeSlowMotor.setPower(-1);
-                }
-                else if (master.left_bumper) {
-                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    upIntakeMotor.setPower(1);
-                    upIntakeSlowMotor.setPower(1);
-                    flywheel_left.setVelocity(-500);
-                    flywheel_right.setVelocity(-500);
-                }
-                else {
-                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    upIntakeMotor.setPower(0);
-                    upIntakeSlowMotor.setPower(0);
-                }
-
-                // FLYWHEEL - TOGGLE IDLE (dpad_left)
-
-                boolean yStateActual = master.dpad_left;
-
-                if (yStateActual && !yStateBefore){
-                    flywheelActivate = !flywheelActivate;
-                }
-
-                yStateBefore = yStateActual;
-
-                // FLYWHEEL - TOGGLE FULL SPEED (Y)
-
-                boolean dpadLeftActualMaster = master.y;
-
-                if (dpadLeftActualMaster && !dpadLeftBeforeMaster){
-                    flywheelFullSpeed = !flywheelFullSpeed;
-                }
-
-                dpadLeftBeforeMaster = dpadLeftActualMaster;
-
-                if (flywheelFullSpeed) {
-                    int filteredFullVelocity = update(TARGET_VELOCITY);
-                    flywheel_right.setVelocity(filteredFullVelocity);
-                    flywheel_left.setVelocity(filteredFullVelocity);
-
-                } else if (flywheelActivate){
-                    flywheel_right.setVelocity(IDLE_VELOCITY);
-                    flywheel_left.setVelocity(IDLE_VELOCITY);
-
-                } else if (!master.left_bumper){
-                    flywheel_right.setVelocity(0);
-                    flywheel_left.setVelocity(0);
-                }
-
-                // CLIMBING
-
-                boolean xStateActual = master.x;
-
-                if (xStateActual && !xStateBefore){
-                    climbingMode = !climbingMode;
-                }
-
-                xStateBefore=xStateActual;
-
-                if (climbingMode){
-                    climbMotorInt.setPower(climbVelocity);
-                    climbMotorEst.setPower(climbVelocity);
-                } else {
-                    climbMotorInt.setPower(0);
-                    climbMotorEst.setPower(0);
-                }
-
-                boolean currentUpDpad = master.dpad_up;
-                boolean currentDownDpad = master.dpad_down;
-
-                if (currentUpDpad && !lastUpDpad && climbVelocity< 0.9){
-                    climbVelocity+=.1;
-                }
-
-                if (currentDownDpad && !lastDownDpad && climbVelocity>-0.9){
-                    climbVelocity-=.1;
-                }
-
-                lastDownDpad = currentDownDpad;
-                lastUpDpad = currentUpDpad;
-
-
-            } else { /// CLAUDIO mode attivata
-
-                /// -*=======*- GAMEPAD1 | GUIDA -*=======*-
-
-                // GUIDA
-
+            if (!fullController){
                 boolean bStateActualUster = gamepad1.b;
-
                 if (bStateActualUster && !bStateBeforeUster){
                     usterMode = !usterMode;
                 }
-
                 bStateBeforeUster = bStateActualUster;
-
-                if (usterMode){
-                    leftPower = -gamepad1.left_stick_y;
-                    rightPower = -gamepad1.right_stick_y;
-
-                } else {
-                    double throttle = -gamepad1.left_stick_y;
-                    double spin = gamepad1.right_stick_x;
-                    leftPower = throttle + spin;
-                    rightPower = throttle - spin;
-                    double max = Math.max(Math.abs(leftPower),Math.abs(rightPower));
-                    if (max>1.0){
-                        leftPower /= max;
-                        rightPower /= max;
-                    }
-                }
-
-                // MARCE
-
-                boolean currentRightTrigger = gamepad1.right_trigger_pressed;
-                boolean currentLeftTrigger = gamepad1.left_trigger_pressed;
-
-                if (currentRightTrigger && !lastRightTrigger) {
-                    if (scale < 1.0) {
-                        scale += 0.25;
-                    }
-                }
-
-                if (currentLeftTrigger && !lastLeftTrigger) {
-                    if (scale > 0.25) {
-                        scale -= 0.25;
-                    }
-                }
-
-                lastRightTrigger = currentRightTrigger;
-                lastLeftTrigger = currentLeftTrigger;
-
-                leftPower *= scale;
-                rightPower *= scale;
-
-                leftMotor.setPower(leftPower);
-                rightMotor.setPower(rightPower);
-
-                // CLIMBING
-
-                boolean xStateActual = gamepad1.x;
-
-                if (xStateActual && !xStateBefore){
-                    climbingMode = !climbingMode;
-                }
-
-                xStateBefore=xStateActual;
-
-                if (climbingMode){
-                    climbMotorInt.setPower(climbVelocity);
-                    climbMotorEst.setPower(climbVelocity);
-                } else {
-                    climbMotorInt.setPower(0);
-                    climbMotorEst.setPower(0);
-                }
-
-                boolean currentUpDpad = gamepad1.dpad_up;
-                boolean currentDownDpad = gamepad1.dpad_down;
-
-                if (currentUpDpad && !lastUpDpad && climbVelocity< 0.9){
-                    climbVelocity+=.1;
-                }
-
-                if (currentDownDpad && !lastDownDpad && climbVelocity>-0.9){
-                    climbVelocity-=.1;
-                }
-
-                lastDownDpad = currentDownDpad;
-                lastUpDpad = currentUpDpad;
-
-
-                /// -*=======*- GAMEPAD2 | MECCANISMI -*=======*-
-
-                // TOGGLE SERVO CON CERCHIO (gamepad2.b) - APERTO/CHIUSO
-
-                boolean bStateActualServo = gamepad2.b;
-
-                if (bStateActualServo && !bStateBeforeServo){
-                    servoToggleOpen = !servoToggleOpen;
-                }
-
-                //aggiunta - controllo velocityok, stessa logica del God Mode
-                if (!flywheelFullSpeed){
-                    velocityok=false;
-                }
-
-                if (flywheel_right.getVelocity() > 1700 && flywheel_left.getVelocity() > 1700 && flywheelFullSpeed){
-                    velocityok=true;
-                }
-
-                bStateBeforeServo = bStateActualServo;
-
-                // INTAKE, SPARO & PALLE ALLA FLYWHEEL
-
-                if (gamepad2.a && velocityok) {
-                    servitoreRight.setPosition(SERVO_SHOOT);
-                    servitoreLeft.setPosition(SERVO_SHOOT);
-                    upIntakeMotor.setPower(-0.8);
-                    upIntakeSlowMotor.setPower(-0.8);
-                }
-                else if (gamepad2.right_bumper) {
-                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    upIntakeMotor.setPower(-1);
-                    upIntakeSlowMotor.setPower(0);
-                }
-                else if (gamepad2.left_bumper) {
-                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    upIntakeMotor.setPower(1);
-                    upIntakeSlowMotor.setPower(1);
-                    flywheel_left.setVelocity(-500);
-                    flywheel_right.setVelocity(-500);
-                }
-                else {
-                    servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-                    upIntakeMotor.setPower(0);
-                    upIntakeSlowMotor.setPower(0);
-                }
-
-                // FLYWHEEL - TOGGLE IDLE (X)
-
-                boolean xStateActualG2 = gamepad2.x;
-
-                if (xStateActualG2 && !xStateBeforeG2){
-                    flywheelActivate = !flywheelActivate;
-                }
-
-                xStateBeforeG2 = xStateActualG2;
-
-                // FLYWHEEL - TOGGLE FULL SPEED (Y)
-
-                boolean yStateActual = gamepad2.y;
-
-                if (yStateActual && !yStateBefore){
-                    flywheelFullSpeed = !flywheelFullSpeed;
-                }
-
-                yStateBefore = yStateActual;
-
-                if (flywheelFullSpeed) {
-                    int filteredFullVelocity = update(TARGET_VELOCITY);
-                    flywheel_right.setVelocity(filteredFullVelocity);
-                    flywheel_left.setVelocity(filteredFullVelocity);
-
-                } else if (flywheelActivate){
-                    flywheel_right.setVelocity(IDLE_VELOCITY);
-                    flywheel_left.setVelocity(IDLE_VELOCITY);
-
-                } else if (!gamepad2.left_bumper){
-                    flywheel_right.setVelocity(0);
-                    flywheel_left.setVelocity(0);
-                }
             }
 
+            if (!fullController && usterMode){
+                leftPower = -driver.left_stick_y;
+                rightPower = -driver.right_stick_y;
+            } else {
+                driveArcade(-driver.left_stick_y, driver.right_stick_x);
+            }
 
+            applyGearAndDrive(driver);
+
+            // -*=======*- CLIMBING -*=======*-
+            // Stessa logica e stessi tasti (X, dpad su/giù) sia in Claudio che in God Mode:
+            // basta passare il gamepad giusto.
+
+            handleClimbing(driver);
+
+            // -*=======*- MECCANISMI (intake, sparo, servo, flywheel) -*=======*-
+            // Stessa logica in entrambe le modalità. Cambiano solo i TASTI usati per
+            // Idle/Full Speed, perché in God Mode il tasto X è già occupato dal Climbing
+            // (sullo stesso gamepad master), quindi l'Idle viene spostato su dpad_left.
+            // In Claudio Mode invece climbing e meccanismi sono su due gamepad diversi,
+            // quindi non c'è conflitto e l'Idle resta su X.
+
+            if (fullController){
+                handleMechanisms(
+                        operator.a,            // sparo
+                        operator.b,             // toggle servo
+                        operator.dpad_left,     // toggle Idle (spostato per non collidere con Climbing su X)
+                        operator.y,             // toggle Full Speed
+                        operator.right_bumper,  // intake
+                        operator.left_bumper    // outtake
+                );
+            } else {
+                handleMechanisms(
+                        operator.a,            // sparo
+                        operator.b,             // toggle servo
+                        operator.x,             // toggle Idle
+                        operator.y,             // toggle Full Speed
+                        operator.right_bumper,  // intake
+                        operator.left_bumper    // outtake
+                );
+            }
 
 
             // A SUMMARY FOR THE DRIVER
@@ -603,6 +353,210 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         }
     }
 
+    // =========================================================================================
+    //                                    METODI CONDIVISI
+    // =========================================================================================
+    // Questi metodi contengono la logica che prima era scritta due volte (una per Claudio Mode
+    // e una per God Mode). Ora vengono chiamati da entrambe le modalità nel loop principale,
+    // passando come parametri i valori dei tasti letti dal gamepad giusto per quella modalità.
+    // Se in futuro serve cambiare il comportamento di un meccanismo, basta modificarlo QUI:
+    // la modifica si applica automaticamente sia a Claudio Mode che a God Mode.
+
+    /**
+     * Calcola leftPower/rightPower per la guida Arcade (throttle + sterzo), con normalizzazione
+     * se la somma supera 1.0. Scrive direttamente nei campi leftPower/rightPower.
+     *
+     * @param throttle avanti/indietro, già con il segno giusto (tipicamente -stick_y)
+     * @param spin     sterzo, tipicamente right_stick_x
+     */
+    private void driveArcade(double throttle, double spin){
+        leftPower = throttle + spin;
+        rightPower = throttle - spin;
+        double max = Math.max(Math.abs(leftPower), Math.abs(rightPower));
+        if (max > 1.0){
+            leftPower /= max;
+            rightPower /= max;
+        }
+    }
+
+    /**
+     * Gestisce il cambio marcia (scale) con i grilletti del gamepad passato, applica la scala
+     * a leftPower/rightPower e li invia ai motori di trazione. Usato sia da gamepad1 (Claudio
+     * Mode) che dal master (God Mode) perché il mapping marce è identico nelle due modalità.
+     *
+     * @param g gamepad da cui leggere i grilletti (gamepad1 in Claudio Mode, master in God Mode)
+     */
+    private void applyGearAndDrive(Gamepad g){
+        boolean currentRightTrigger = g.right_trigger > 0.5;
+        boolean currentLeftTrigger = g.left_trigger > 0.5;
+
+        if (currentRightTrigger && !lastRightTrigger) {
+            if (scale < 1.0) {
+                scale += 0.25;
+            }
+        }
+
+        if (currentLeftTrigger && !lastLeftTrigger) {
+            if (scale > 0.25) {
+                scale -= 0.25;
+            }
+        }
+
+        lastRightTrigger = currentRightTrigger;
+        lastLeftTrigger = currentLeftTrigger;
+
+        leftPower *= scale;
+        rightPower *= scale;
+
+        leftMotor.setPower(leftPower);
+        rightMotor.setPower(rightPower);
+    }
+
+    /**
+     * Gestisce il toggle del Climbing Mode (tasto X) e la regolazione della velocità di
+     * climbing (dpad su/giù). Stessa logica e stessi tasti sia in Claudio Mode (gamepad1)
+     * che in God Mode (master), quindi un solo metodo basta per entrambe le modalità.
+     *
+     * @param g gamepad da cui leggere X e dpad su/giù
+     */
+    private void handleClimbing(Gamepad g){
+        boolean xStateActual = g.x;
+
+        if (xStateActual && !xStateBefore){
+            climbingMode = !climbingMode;
+        }
+
+        xStateBefore = xStateActual;
+
+        if (climbingMode){
+            climbMotorInt.setPower(climbVelocity);
+            climbMotorEst.setPower(climbVelocity);
+        } else {
+            climbMotorInt.setPower(0);
+            climbMotorEst.setPower(0);
+        }
+
+        boolean currentUpDpad = g.dpad_up;
+        boolean currentDownDpad = g.dpad_down;
+
+        if (currentUpDpad && !lastUpDpad && climbVelocity < 0.9){
+            climbVelocity += .1;
+        }
+
+        if (currentDownDpad && !lastDownDpad && climbVelocity > -0.9){
+            climbVelocity -= .1;
+        }
+
+        lastDownDpad = currentDownDpad;
+        lastUpDpad = currentUpDpad;
+    }
+
+    /**
+     * Gestisce TUTTI i meccanismi: toggle servo, sparo, intake/outtake, e i due stati del
+     * flywheel (Idle e Full Speed). I tasti non vengono letti direttamente da un Gamepad qui
+     * dentro: vengono passati già come booleani dal chiamante, perché Claudio Mode e God Mode
+     * usano tasti leggermente diversi per Idle/Full Speed (per evitare conflitti con altri
+     * comandi sullo stesso gamepad in God Mode). Così la LOGICA resta unica, mentre il MAPPING
+     * dei tasti resta libero di variare tra le due modalità.
+     *
+     * Priorità di stato del flywheel (dall'alto in basso):
+     *   1) Full Speed attivo  -> rampa fino a TARGET_VELOCITY (2000)
+     *   2) Idle attivo        -> velocità fissa IDLE_VELOCITY (900), senza rampa
+     *   3) nessuno dei due     -> velocità 0 (a meno che si stia tenendo premuto outtakeBtn,
+     *                             che spinge il flywheel a -500 per liberare palline incastrate)
+     *
+     * Lo sparo (shootBtn) è abilitato solo se velocityok è vera, cioè se il Full Speed è
+     * attivo e ENTRAMBI i flywheel hanno superato 1700 RPM. Una volta vera, velocityok resta
+     * vera finché il Full Speed non viene disattivato (si azzera subito quando si spegne).
+     *
+     * @param shootBtn        tasto sparo (A)
+     * @param servoToggleBtn  tasto toggle servo (B)
+     * @param idleToggleBtn   tasto toggle Idle (X in Claudio Mode, dpad_left in God Mode)
+     * @param fullSpeedToggleBtn tasto toggle Full Speed (Y in entrambe le modalità)
+     * @param intakeBtn       tasto intake (right bumper)
+     * @param outtakeBtn      tasto outtake (left bumper)
+     */
+    private void handleMechanisms(boolean shootBtn, boolean servoToggleBtn, boolean idleToggleBtn,
+                                  boolean fullSpeedToggleBtn, boolean intakeBtn, boolean outtakeBtn){
+
+        // --- Toggle servo (aperto/chiuso quando non si sta sparando o facendo intake/outtake) ---
+        if (servoToggleBtn && !bStateBeforeServo){
+            servoToggleOpen = !servoToggleOpen;
+        }
+        bStateBeforeServo = servoToggleBtn;
+
+        // --- Controllo velocityok: si azzera appena si spegne il Full Speed, diventa vera
+        //     quando entrambi i flywheel superano 1700 RPM con il Full Speed attivo, e resta
+        //     vera finché il Full Speed resta attivo (anche se poi la velocità scende un po'). ---
+        if (!flywheelFullSpeed){
+            velocityok = false;
+        }
+        if (flywheel_right.getVelocity() > 1700 && flywheel_left.getVelocity() > 1700 && flywheelFullSpeed){
+            velocityok = true;
+        }
+
+        // --- Sparo / Intake / Outtake / stato di riposo ---
+        if (shootBtn && velocityok) {
+            servitoreRight.setPosition(SERVO_SHOOT);
+            servitoreLeft.setPosition(SERVO_SHOOT);
+            upIntakeMotor.setPower(-0.8);
+            upIntakeSlowMotor.setPower(-0.8);
+        }
+        else if (intakeBtn) {
+            servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+            servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+            upIntakeMotor.setPower(-1);
+            upIntakeSlowMotor.setPower(-1);
+        }
+        else if (outtakeBtn) {
+            servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+            servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+            upIntakeMotor.setPower(1);
+            upIntakeSlowMotor.setPower(1);
+            // mentre si fa outtake, il flywheel viene spinto all'indietro per aiutare a
+            // espellere eventuali palline incastrate
+            flywheel_left.setVelocity(-500);
+            flywheel_right.setVelocity(-500);
+        }
+        else {
+            servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+            servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
+            upIntakeMotor.setPower(0);
+            upIntakeSlowMotor.setPower(0);
+        }
+
+        // --- Toggle Idle ---
+        if (idleToggleBtn && !xStateBeforeG2){
+            flywheelActivate = !flywheelActivate;
+        }
+        xStateBeforeG2 = idleToggleBtn;
+
+        // --- Toggle Full Speed ---
+        if (fullSpeedToggleBtn && !yStateBefore){
+            flywheelFullSpeed = !flywheelFullSpeed;
+        }
+        yStateBefore = fullSpeedToggleBtn;
+
+        // --- Applica lo stato scelto al flywheel (priorità: Full Speed > Idle > spento) ---
+        if (flywheelFullSpeed) {
+            int filteredFullVelocity = update(TARGET_VELOCITY);
+            flywheel_right.setVelocity(filteredFullVelocity);
+            flywheel_left.setVelocity(filteredFullVelocity);
+        } else if (flywheelActivate){
+            flywheel_right.setVelocity(IDLE_VELOCITY);
+            flywheel_left.setVelocity(IDLE_VELOCITY);
+        } else if (!outtakeBtn){
+            // non azzerare se si sta tenendo premuto outtake, altrimenti si sovrascriverebbe
+            // subito il -500 impostato qui sopra
+            flywheel_right.setVelocity(0);
+            flywheel_left.setVelocity(0);
+        }
+    }
+
+    /**
+     * Rampa la potenza del flywheel verso targetPower di al massimo maxStep unità per ciclo,
+     * per evitare sbalzi di corrente troppo bruschi quando si passa da fermo a Full Speed.
+     */
     public int update(int targetPower){
 
         int error = targetPower - currentPower;

@@ -15,6 +15,11 @@ prima prova slider
 SOFTWARE
 aggiunta controllo unico prima dello sparo a 1700 giri
 implementazione di tutte le funzioni sia su godmode che su claudiomode
+modificate le velocità di outtake e flywheel a sparo
+implementazione servo (slider_left,slider_right)
+implementazione handle servo
+implementazione posizioni SOUT 0.22 e SIN 0.00
+
 
 PROGRAMMMA REFACTORIZZATO
 La logica di meccanismi, climbing e guida era duplicata quasi identica tra Claudio Mode
@@ -24,6 +29,20 @@ Ora la logica vive in metodi unici (handleMechanisms, handleClimbing, driveArcad
 applyGearAndDrive), chiamati sia da Claudio Mode che da God Mode passando i tasti giusti
 per ciascuna modalità. Il comportamento a runtime non cambia, cambia solo come è organizzato
 il codice. Vedi i commenti nella sezione "METODI CONDIVISI" più sotto per i dettagli.
+
+HARDWARE
+aggiunta piccolo pezzo policarbonato sotto motore intakemotor per evitare incastro palline
+spostamento a misura massima dei pezzi di appoggio al muro antibattuta per provare a contenere le palline sotto il canestro, poi li abbaimo spostati indietro
+implementazione slider
+ */
+
+/*programma caricato e aggiornato 7/9/26
+SOFTWARE
+
+
+HARDWARE
+alzato rulli e motori per evitare l'incastro delle palline in outtake
+
  */
 
 package org.firstinspires.ftc.teamcode;
@@ -36,6 +55,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
+
 
 /*
  * =========================================================================================
@@ -95,15 +116,45 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  */
 
 
+
+
 @TeleOp (name = "testmodificheuniche",group = "TeleOp Competition")
 public class TeleOpMovements_NewControl extends LinearOpMode {
+
+    private void showJollyRoger(){
+        telemetry.addLine("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+        telemetry.addLine("@@@@@@@@@@@@@@@@@@@@##++++++###@@@@@@@@@@@@@@@@@@@");
+        telemetry.addLine("@@@#.  .#@@@@@@##:  =+######+=. .##@@@@@@#.  .#@@@");
+        telemetry.addLine("@@# ##@# ##@@#: +##@@@@@@@@@@@@@#+ .##@@# ##@# #@@");
+        telemetry.addLine("#: :#@@@.:##+ +#@@@@@@@@@@@@@@@@@@#+ =##:.#@@@: :#");
+        telemetry.addLine(".=##@@@@#=   #@@@@@@@@@@@@@@@@@@@@@@#.  =#@@@@@#=.");
+        telemetry.addLine("= +#+:=#### ###@@@@@@@@@@@@@@@@@@@@@## ####=.+#+ =");
+        telemetry.addLine("@#######. :.#++@@@@@@@@@@@@@@@@@@@@#=#.. .#######@");
+        telemetry.addLine("@@@@@@@@@#+ ##=#@@###@@@@@@@@###@@@=+# +#@@@@@@@@@");
+        telemetry.addLine("@@@@@@@@@@#.===#:     +@@@@#     :#=:+ #@@@@@@@@@@");
+        telemetry.addLine("@@@@@@@@@@@=  ##       #@@#       +#  :@@@@@@@@@@@");
+        telemetry.addLine("@@@@@@@@@@@# =##:     =####+     .##+ #@@@@@@@@@@@");
+        telemetry.addLine("@@@@@@@@@@@+ #@@@######=  :#######@@#.=@@@@@@@@@@@");
+        telemetry.addLine("@@@@@@@@@@@#+ +####@@##    +#@@####+ =#@@@@@@@@@@@");
+        telemetry.addLine("@@@@@@@@@##: :+:=  :#@#+##+##@:  =:=: :##@@@@@@@@@");
+        telemetry.addLine("@@#+..:=. =##@#: : ##@@@@@@@@## . :#@##= .=:..+#@@");
+        telemetry.addLine("@@.:#@###@@#+ :### #.# +==# #.# ###: =#@@###@#:.#@");
+        telemetry.addLine("@@..##@@@@= +##@@@#=:. :::: .:=##@@@#+ =#@@@##..#@");
+        telemetry.addLine("@@##= #@@# +@@@@@@@@@@#######@@@@@@@@@+ #@@# =##@@");
+        telemetry.addLine("@@@@#..##= #@@@@@@@@@@@@@@@@@@@@@@@@@@# =##:.#@@@@");
+        telemetry.addLine("@@@@@##==##@@@@@@@@@@@@@@@@@@@@@@@@@@@@##==##@@@@@");
+        telemetry.addLine("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+    }
+
+
     private final ElapsedTime timerServo = new ElapsedTime();
 
     // DICHIARARE I MOTORI
     private DcMotor leftMotor, rightMotor, upIntakeMotor, upIntakeSlowMotor, climbMotorInt, climbMotorEst;
 
     private DcMotorEx flywheel_left, flywheel_right;
-    private Servo servitoreRight, servitoreLeft;
+    private Servo servitoreRight, servitoreLeft, sliderRight, sliderLeft;
+    private DigitalChannel magneticLimit;
 
     // USE: UPDATE (rampa di velocità per il flywheel, vedi metodo update() in fondo al file)
     private int currentPower = 0;
@@ -114,7 +165,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean bStateBeforeServo = false; // stato precedente del tasto per rilevare il click (edge detection)
 
     // USE: COSTANTI / VARIABILI con valore predefinito
-    private static final int TARGET_VELOCITY = 2000;
+    private static final int TARGET_VELOCITY = 2200;
     private static final int IDLE_VELOCITY = 900;
     private static final double SERVO_CLOSE = 0.01;
     private static final double SERVO_OPEN = 0.17;
@@ -155,12 +206,24 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean lastUpDpad = false;
     boolean lastDownDpad = false;
 
+    //USE: SLIDER
+    private static final double SOUT = 0.3;
+    private static final double SIN = 0.00;
+    boolean optionsStateBefore = false;
+    boolean isSliderOpen = false;
+
+
+
+
+
 
 
     @Override
     public void runOpMode() throws InterruptedException{
 
         /// INITIALIZING SENSORS
+        // magneticLimit = hardwareMap.get(DigitalChannel.class, "magnetic_limit_slider");
+        // magneticLimit.setMode(DigitalChannel.Mode.INPUT);
 
         /// INITIALIZING MOTORS
         leftMotor = hardwareMap.get(DcMotor.class, "left_motor");
@@ -170,6 +233,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
         servitoreRight = hardwareMap.get(Servo.class, "servitore_1");
         servitoreLeft = hardwareMap.get(Servo.class, "servitore_2");
+
+        sliderRight = hardwareMap.get(Servo.class, "slider_dx");
+        sliderLeft = hardwareMap.get(Servo.class, "slider_sx");
 
         flywheel_right = hardwareMap.get(DcMotorEx.class, "flywheel_right");
         flywheel_left = hardwareMap.get(DcMotorEx.class, "flywheel_left");
@@ -232,7 +298,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
 
         /// WHEN THE ROBOT IS READY, PRESS PLAY
-        telemetry.addLine("[Initialized] Press Play to start");
+        telemetry.addLine("La vespa è in moto e pronta a partire.");
+        telemetry.addLine("Premi PLAY per inserire la prima marcia");
+        showJollyRoger();
         telemetry.update();
 
 
@@ -301,6 +369,10 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
             handleClimbing(driver);
 
+            // -*=======*- SLIDER -*=======*-
+
+            handleSlider(driver);
+
             // -*=======*- MECCANISMI (intake, sparo, servo, flywheel) -*=======*-
             // Stessa logica in entrambe le modalità. Cambiano solo i TASTI usati per
             // Idle/Full Speed, perché in God Mode il tasto X è già occupato dal Climbing
@@ -312,7 +384,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 handleMechanisms(
                         operator.a,            // sparo
                         operator.b,             // toggle servo
-                        operator.dpad_left,     // toggle Idle (spostato per non collidere con Climbing su X)
+                        operator.x,     // toggle Idle (spostato per non collidere con Climbing su X)
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
                         operator.left_bumper    // outtake
@@ -449,6 +521,42 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         lastUpDpad = currentUpDpad;
     }
 
+    //slider handle
+
+    /**
+     * Gestisce l'apertura e chiusura degli slider.
+     * Funziona come un toggle (premi una volta per aprire, premi di nuovo per chiudere).
+     * Se gli slider sono aperti e il sensore magnetico rileva la calamita, li chiude in automatico.
+     */
+    private void handleSlider(Gamepad g) {
+
+        // 1. Lettura in TEMPO REALE del sensore.
+        // I sensori REV DigitalChannel restituiscono FALSE quando il magnete è vicino.
+        boolean magnetDetected = !magneticLimit.getState();
+
+        // 2. Logica Toggle per il tasto "options"
+        boolean currentOptions = g.options;
+        if (currentOptions && !optionsStateBefore) {
+            isSliderOpen = !isSliderOpen; // Inverte lo stato (apre se chiuso, chiude se aperto)
+        }
+        optionsStateBefore = currentOptions;
+
+        // 3. OVERRIDE DEL SENSORE (Chiusura Automatica)
+        // Se gli slider sono aperti E il sensore rileva la calamita, forziamo la chiusura
+        if (isSliderOpen && magnetDetected) {
+            isSliderOpen = false;
+        }
+
+        // 4. Applicazione della posizione ai Servo
+        if (isSliderOpen) {
+            sliderLeft.setPosition(SOUT);
+            sliderRight.setPosition(SOUT);
+        } else {
+            sliderLeft.setPosition(SIN);
+            sliderRight.setPosition(SIN);
+        }
+    }
+
     /**
      * Gestisce TUTTI i meccanismi: toggle servo, sparo, intake/outtake, e i due stati del
      * flywheel (Idle e Full Speed). I tasti non vengono letti direttamente da un Gamepad qui
@@ -473,6 +581,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
      * @param fullSpeedToggleBtn tasto toggle Full Speed (Y in entrambe le modalità)
      * @param intakeBtn       tasto intake (right bumper)
      * @param outtakeBtn      tasto outtake (left bumper)
+     * //@param slider          tasto per lo slider
      */
     private void handleMechanisms(boolean shootBtn, boolean servoToggleBtn, boolean idleToggleBtn,
                                   boolean fullSpeedToggleBtn, boolean intakeBtn, boolean outtakeBtn){
@@ -489,9 +598,11 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         if (!flywheelFullSpeed){
             velocityok = false;
         }
-        if (flywheel_right.getVelocity() > 1700 && flywheel_left.getVelocity() > 1700 && flywheelFullSpeed){
+        if (flywheel_right.getVelocity() > 1750 && flywheel_left.getVelocity() > 1750 && flywheelFullSpeed){
             velocityok = true;
         }
+
+        //bisogna rendere una variabile la velocita di check
 
         // --- Sparo / Intake / Outtake / stato di riposo ---
         if (shootBtn && velocityok) {
@@ -509,12 +620,12 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         else if (outtakeBtn) {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
             servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-            upIntakeMotor.setPower(1);
-            upIntakeSlowMotor.setPower(1);
+            upIntakeMotor.setPower(0.4);
+            upIntakeSlowMotor.setPower(0.7);
             // mentre si fa outtake, il flywheel viene spinto all'indietro per aiutare a
             // espellere eventuali palline incastrate
-            flywheel_left.setVelocity(-500);
-            flywheel_right.setVelocity(-500);
+            flywheel_left.setVelocity(-600);
+            flywheel_right.setVelocity(-600);
         }
         else {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);

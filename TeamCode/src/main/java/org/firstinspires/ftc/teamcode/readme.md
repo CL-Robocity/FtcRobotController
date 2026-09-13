@@ -3,461 +3,296 @@
 Italiano sotto ogni sezione, traduzione inglese subito dopo.
 Italian below each section, English translation right after.
 
-## Panoramica
+---
 
-Questo OpMode TeleOp per FTC implementa due modalità di controllo: Claudio Mode (due giocatori) e God Mode (un gamepad prende il controllo totale). Si passa dall'una all'altra al volo con una combo di tasti.
+## 1. Panoramica del progetto
 
-## Overview
+Questo OpMode TeleOp per FTC implementa due modalità di controllo: **Claudio Mode** (due giocatori, di default) e **God Mode** (un solo gamepad prende il controllo totale). Si passa dall'una all'altra al volo con la combo **L3+R3**, premibile da entrambi i gamepad.
 
-This FTC TeleOp OpMode implements two control modes: Claudio Mode (two players) and God Mode (one gamepad takes full control). You switch between them on the fly with a button combo.
+Il robot gestisce: guida (Arcade o Uster), cambio marcia a step, un sistema di intake/outtake a doppio motore, un flywheel a doppia velocità con controllo di sicurezza prima dello sparo, due servo "servitori" per il rilascio delle palline, uno slider a due posizioni fisse, un sistema di climbing a velocità regolabile, e un tentativo (non funzionante) di feedback sonoro.
+
+## 1. Project Overview
+
+This FTC TeleOp OpMode implements two control modes: **Claudio Mode** (two players, default) and **God Mode** (one gamepad takes full control). You switch between them on the fly with the **L3+R3** combo, pressable from either gamepad.
+
+The robot handles: driving (Arcade or Uster), stepped gear shifting, a dual-motor intake/outtake system, a dual-speed flywheel with a safety check before shooting, two "servitore" servos for releasing balls, a two-position slider, an adjustable-speed climbing system, and an (currently non-functional) attempt at sound feedback.
 
 ---
 
-## Claudio Mode (modalità di default)
+## 2. Changelog Hardware/Software
 
-Gamepad1 guida il robot, gamepad2 controlla i meccanismi (intake, flywheel, servo).
+Changelog completo, in ordine cronologico, ricostruito dai commenti in testa al file sorgente. Ogni versione è cumulativa rispetto alla precedente.
 
-## Claudio Mode (default mode)
+Full changelog, in chronological order, reconstructed from the comments at the top of the source file. Each version is cumulative on top of the previous one.
 
-Gamepad1 drives the robot, gamepad2 controls the mechanisms (intake, flywheel, servo).
+### 3/9/26
 
----
+**SW:** aggiunto controllo indipendente dell'apertura servo; aggiunta rotazione dello slowintake motor durante l'intake; aggiunta rotazione inversa del flywheel durante l'outtake; modificato l'utilizzo della idle velocity (rimane nel codice ma non più necessaria).
+**HW:** modificata l'altezza del primo rullo di intake; aggiunti due pezzi per il blocco/incastro delle palline sia sul buco centrale superiore che sui buchi laterali del flywheel; prima prova dello slider.
 
-## God Mode
+**SW:** added independent open-servo control; added slowintake motor rotation during intake; added flywheel reverse rotation during outtake; modified idle-velocity usage (still in the code but no longer needed).
+**HW:** changed the height of the first intake roller; added two pieces to block/jam balls both on the central top hole and the side holes of the flywheel; first slider prototype test.
 
-Si attiva premendo L3+R3 insieme su uno dei due gamepad. Chi preme la combo diventa il "master" e prende il controllo di guida e meccanismi; l'altro gamepad viene disattivato del tutto. Si esce premendo di nuovo la combo su uno qualsiasi dei due gamepad. La Uster Mode non è disponibile in God Mode, solo in Claudio Mode.
+### 4/9/26
 
-## God Mode
+**SW:** aggiunto un controllo unico prima dello sparo a 1700 giri; implementate tutte le funzioni sia in God Mode che in Claudio Mode; modificate le velocità di outtake e flywheel a sparo; implementati i servo slider (slider_left, slider_right) e il relativo handle; implementate le posizioni SOUT 0.22 e SIN 0.00. **Refactor**: la logica di meccanismi, climbing e guida (duplicata quasi identica tra le due modalità) è stata spostata in metodi condivisi unici (`handleMechanisms`, `handleClimbing`, `driveArcade`, `applyGearAndDrive`), chiamati da entrambe le modalità passando i tasti giusti — nessun cambio di comportamento a runtime, solo di organizzazione del codice.
+**HW:** aggiunto un piccolo pezzo di policarbonato sotto l'intake motor per evitare l'incastro delle palline; i pezzi di appoggio al muro antibattuta sono stati portati alla misura massima per contenere le palline sotto il canestro, poi riportati indietro; implementazione fisica dello slider.
 
-Activated by pressing L3+R3 together on either gamepad. Whoever presses the combo becomes the "master" and takes over both driving and mechanisms; the other gamepad is fully disabled. You exit by pressing the combo again on either gamepad. Uster Mode is not available in God Mode, only in Claudio Mode.
+**SW:** added a single check before shooting at 1700 rpm; implemented all functions in both God Mode and Claudio Mode; modified outtake/flywheel shooting speeds; implemented the slider servos (slider_left, slider_right) and their handle; implemented SOUT 0.22 and SIN 0.00 positions. **Refactor**: mechanism/climbing/driving logic (near-identical duplicated code between the two modes) was moved into unique shared methods (`handleMechanisms`, `handleClimbing`, `driveArcade`, `applyGearAndDrive`), called by both modes with the right buttons passed in — no runtime behavior change, only code organization.
+**HW:** added a small polycarbonate piece under the intake motor to prevent ball jamming; the anti-rebound wall spacer pieces were moved to maximum size to try to contain balls under the basket, then moved back; physical slider implementation.
 
----
+### 7/9/26
 
-## Tasti - Claudio Mode, Gamepad1 (guida)
+**SW:** nessuna modifica.
+**HW:** alzati rulli e motori per evitare l'incastro delle palline in outtake.
 
-- Stick sinistro (Y): avanti/indietro (Arcade) o motore SX (Uster)
-- Stick destro: sterzo (Arcade) o motore DX (Uster)
-- B (cerchio): toggle Uster Mode / Arcade Mode
-- X (quadrato): toggle Climbing Mode
-- D-pad su/giù: regola la velocità di climbing
-- L2/R2: marcia giù/su (scala di potenza)
-- L3+R3: attiva God Mode
+**SW:** no changes.
+**HW:** raised rollers and motors to avoid ball jamming during outtake.
 
-## Buttons - Claudio Mode, Gamepad1 (driver)
+### 9/9/26 (prima modifica / first update)
 
-- Left stick (Y): forward/back (Arcade) or left motor (Uster)
-- Right stick: steering (Arcade) or right motor (Uster)
-- B (circle): toggle Uster Mode / Arcade Mode
-- X (square): toggle Climbing Mode
-- D-pad up/down: adjust climb speed
-- L2/R2: gear down/up (power scale)
-- L3+R3: activate God Mode
+**HW:** rivisitazione storica dell'intake, con aggiunta dello slider e altre piccole modifiche.
 
----
+**HW:** historic revisit of the intake, with the slider added and other minor tweaks.
 
-## Tasti - Claudio Mode, Gamepad2 (meccanismi)
+### 9/9/26 (seconda modifica / second update)
 
-- A (croce): sparo, apre i servo e attiva l'intake (solo se il flywheel supera 1800 RPM)
-- B (cerchio): toggle servo aperto/chiuso
-- Y (triangolo): toggle flywheel idle (900 RPM)
-- X (quadrato): toggle flywheel full speed (2000 RPM)
-- D-pad su: eject del flywheel se è quasi fermo (RPM < 100), lo spinge indietro a -500 e apre i servo
-- R1: intake
-- L1: outtake
-- L3+R3: attiva God Mode
+**SW:** rese completamente parametriche, per la rimappatura del controller, tutte le funzioni `handle...`; tentativo di implementazione dei suoni (non funzionante, vedi sezione SoundPlayer).
+**HW:** aggiustate le altezze di flywheel e intake; modificata la rampa con l'aggiunta di una discesa; creata una rete sopra l'intake.
 
-## Buttons - Claudio Mode, Gamepad2 (operator)
+**SW:** made all `handle...` functions fully parametric, for controller remapping; attempted a sound implementation (not working, see the SoundPlayer section).
+**HW:** adjusted flywheel and intake heights; modified the ramp adding a descent; created a net above the intake.
 
-- A (cross): shoot, opens the servos and runs the intake (only if the flywheel is above 1800 RPM)
-- B (circle): toggle servo open/closed
-- Y (triangle): toggle flywheel idle (900 RPM)
-- X (square): toggle flywheel full speed (2000 RPM)
-- D-pad up: eject the flywheel if it's nearly stopped (RPM < 100), pushes it backward to -500 and opens the servos
-- R1: intake
-- L1: outtake
-- L3+R3: activate God Mode
+### 12/9/26
 
----
+**SW:** aggiunta `handleSlider` con controllo di posizione tramite i trigger analogici dell'operatore: R2 incrementa la posizione verso SOUT, L2 la decrementa verso SIN, nessun trigger premuto = posizione bloccata all'ultimo valore. Aggiunta telemetria della posizione slider in tempo reale. *(Questo comportamento analogico è stato poi sostituito il giorno seguente, vedi 13/9 e nota nella sezione Slider.)*
+**HW:** slider finito ma non funzionante insieme all'intake; tentativo di sparo in retromarcia con il vecchio drivetrain.
 
-## Tasti - God Mode (gamepad master)
+**SW:** added `handleSlider` with position control via the operator's analog triggers: R2 increments the position toward SOUT, L2 decrements it toward SIN, no trigger held = position locked at the last value. Added real-time slider position telemetry. *(This analog behavior was replaced the following day, see 13/9 and the note in the Slider section.)*
+**HW:** slider finished but not working together with the intake; attempted reverse-direction shooting with the old drivetrain.
 
-Stessa disposizione di guida di gamepad1, ma con i meccanismi rimappati per non entrare in conflitto con climbing e regolazione velocità di climbing (che restano su X e D-pad su/giù).
+### 13/9/26 (versione attuale / current version)
 
-- Stick sinistro/destro: guida Arcade
-- A: sparo (solo se flywheel > 1800 RPM)
-- B: toggle servo aperto/chiuso
-- X: toggle Climbing Mode
-- Y: toggle flywheel idle
-- D-pad sinistra: toggle flywheel full speed
-- D-pad destra: eject flywheel
-- D-pad su/giù: regola velocità di climbing
-- R1: intake
-- L1: outtake, spinge anche il flywheel indietro a -0.5
-- L2/R2: marcia giù/su
-- L3+R3: disattiva God Mode
+**SW:** aggiunto un controllo di sicurezza per il flywheel legato all'outtake (vedi sezione Flywheel); modificati SIN e SOUT per le nuove lunghezze dei servo e **lo slider è tornato ad essere un toggle** (rimossa la funzione ausiliaria a trigger analogici introdotta il giorno prima); tutte le funzioni sono state inserite dentro `if (fullController)` in modo da avere due mappe controlli distinte e leggibili per God Mode e Claudio Mode.
+**HW:** aggiunto plexiglass frontale per la chiusura parziale dell'intake anche da aperto (manca ancora la rete); abbassato uno dei 4 pezzi della rampa per arrampicarsi meglio; rifatti gli zero di entrambi i servo dello slider.
 
-## Buttons - God Mode (master gamepad)
+**SW:** added a flywheel safety check tied to outtake (see the Flywheel section); modified SIN and SOUT for the new servo lengths and **the slider went back to being a toggle** (removed the analog-trigger auxiliary function introduced the day before); all functions were moved inside `if (fullController)` to give God Mode and Claudio Mode two distinct, readable control maps.
+**HW:** added a front plexiglass panel for partial intake closure even when open (net still missing); lowered one of the 4 ramp pieces for better climbing; redid the zero position of both slider servos.
 
-Same driving layout as gamepad1, but mechanisms are remapped to avoid conflicting with climbing and climb speed adjustment (which stay on X and D-pad up/down).
+### Riepilogo modifiche di valore rispetto alla V3 del README / Summary of value changes vs README V3
 
-- Left/right stick: Arcade drive
-- A: shoot (only if flywheel > 1800 RPM)
-- B: toggle servo open/closed
-- X: toggle Climbing Mode
-- Y: toggle flywheel idle
-- D-pad left: toggle flywheel full speed
-- D-pad right: eject flywheel
-- D-pad up/down: adjust climb speed
-- R1: intake
-- L1: outtake, also pushes flywheel backward at -0.5
-- L2/R2: gear down/up
-- L3+R3: deactivate God Mode
+| Elemento / Item | V3 (documentato prima) | Attuale / Current |
+|---|---|---|
+| Soglia `velocityok` | > 1700 RPM | **> 1750 RPM** |
+| Slider | toggle (X / touchpad) | toggle (X / touchpad) — invariato, dopo una parentesi a trigger analogici il 12/9 poi annullata |
+| Schermata di init | — | "Jolly Roger" rimosso (metodo presente ma non più chiamato), messaggio semplificato |
+| SoundPlayer | non menzionato | import commentato, tentativo non riuscito |
 
 ---
 
-## Logica del flywheel
+## 3. Mappatura Comandi
+
+### Claudio Mode — Gamepad 1 (Guida / Driver)
+
+| Comando | Funzione |
+|---|---|
+| Stick sinistro (Y) | Avanti/indietro (Arcade) oppure motore SX (Uster) |
+| Stick destro | Sterzo (Arcade) oppure motore DX (Uster) |
+| B (cerchio) | Toggle Uster Mode / Arcade Mode |
+| X (quadrato) | Toggle Climbing Mode |
+| D-pad su / giù | Aumenta / diminuisce la velocità di climbing (±0.1, range -0.9…0.9) |
+| L2 / R2 | Marcia giù / su (scala di potenza, step 0.25, range 0.25…1.0) |
+| L3+R3 | Attiva God Mode (master = gamepad1) |
+
+### Claudio Mode — Gamepad 1 (Driver)
+
+| Control | Function |
+|---|---|
+| Left stick (Y) | Forward/back (Arcade) or left motor (Uster) |
+| Right stick | Steering (Arcade) or right motor (Uster) |
+| B (circle) | Toggle Uster Mode / Arcade Mode |
+| X (square) | Toggle Climbing Mode |
+| D-pad up / down | Increase / decrease climb speed (±0.1, range -0.9…0.9) |
+| L2 / R2 | Gear down / up (power scale, step 0.25, range 0.25…1.0) |
+| L3+R3 | Activate God Mode (master = gamepad1) |
+
+### Claudio Mode — Gamepad 2 (Meccanismi / Operator)
+
+| Comando | Funzione |
+|---|---|
+| A (croce) | Sparo: porta i servo a SERVO_SHOOT e attiva l'intake a -0.8 (solo se `velocityok` è vera) |
+| B (cerchio) | Toggle servo aperto/chiuso |
+| X (quadrato) | Toggle slider aperto/chiuso |
+| Y (triangolo) | Toggle flywheel Full Speed (2000 RPM) |
+| Touchpad | Toggle flywheel Idle (900 RPM) |
+| R1 | Intake |
+| L1 | Outtake "sicuro" (vedi sezione Flywheel/Outtake) |
+| L3+R3 | Attiva God Mode (master = gamepad2) |
+
+### Claudio Mode — Gamepad 2 (Operator)
+
+| Control | Function |
+|---|---|
+| A (cross) | Shoot: moves servos to SERVO_SHOOT and runs intake at -0.8 (only if `velocityok` is true) |
+| B (circle) | Toggle servo open/closed |
+| X (square) | Toggle slider open/closed |
+| Y (triangle) | Toggle flywheel Full Speed (2000 RPM) |
+| Touchpad | Toggle flywheel Idle (900 RPM) |
+| R1 | Intake |
+| L1 | "Safe" outtake (see Flywheel/Outtake section) |
+| L3+R3 | Activate God Mode (master = gamepad2) |
+
+### God Mode (gamepad master, attivato con L3+R3)
+
+Un solo gamepad controlla guida e meccanismi. La disposizione ricalca il Gamepad 1 per la guida, ma i meccanismi sono rimappati per non entrare in conflitto con climbing (che resta su X e D-pad su/giù).
+
+| Comando | Funzione |
+|---|---|
+| Stick sinistro/destro | Guida Arcade (Uster Mode non disponibile) |
+| A | Sparo (richiede `velocityok`) |
+| B | Toggle servo aperto/chiuso |
+| X | Toggle Climbing Mode |
+| Y | Toggle flywheel Full Speed |
+| R3 (stick destro premuto) | Toggle flywheel Idle |
+| Touchpad | Toggle slider aperto/chiuso |
+| D-pad su / giù | Regola velocità di climbing |
+| R1 | Intake |
+| L1 | Outtake "sicuro" |
+| L2 / R2 | Marcia giù / su |
+| L3+R3 | Disattiva God Mode |
+
+### God Mode (master gamepad, activated with L3+R3)
+
+A single gamepad controls both driving and mechanisms. The layout mirrors Gamepad 1 for driving, but mechanisms are remapped to avoid conflicting with climbing (which stays on X and D-pad up/down).
+
+| Control | Function |
+|---|---|
+| Left/right stick | Arcade drive (Uster Mode unavailable) |
+| A | Shoot (requires `velocityok`) |
+| B | Toggle servo open/closed |
+| X | Toggle Climbing Mode |
+| Y | Toggle flywheel Full Speed |
+| R3 (right stick button) | Toggle flywheel Idle |
+| Touchpad | Toggle slider open/closed |
+| D-pad up / down | Adjust climb speed |
+| R1 | Intake |
+| L1 | "Safe" outtake |
+| L2 / R2 | Gear down / up |
+| L3+R3 | Deactivate God Mode |
+
+---
+
+## 4. Sistemi Principali
+
+### 4.1 Guida: Arcade vs Uster
+
+L'Arcade Drive (`driveArcade`) calcola `leftPower`/`rightPower` da throttle + sterzo, normalizzando se la somma supera 1.0. È l'unica modalità disponibile in God Mode. La Uster Mode (doppio stick stile tank, un motore per stick) esiste solo in Claudio Mode ed è attivabile con B su gamepad1. In entrambi i casi, `applyGearAndDrive` applica poi la marcia (`scale`) e invia la potenza ai motori.
+
+The Arcade Drive (`driveArcade`) computes `leftPower`/`rightPower` from throttle + steering, normalizing if the sum exceeds 1.0. It's the only mode available in God Mode. Uster Mode (tank-style dual stick, one motor per stick) exists only in Claudio Mode and is toggled with B on gamepad1. In both cases, `applyGearAndDrive` then applies the gear (`scale`) and sends power to the motors.
+
+### 4.2 Flywheel a doppia velocità e sicurezza di sparo
 
 Tre stati possibili, in ordine di priorità:
 
-1. Full speed (se attivo): sale gradualmente fino a 2000 tramite la rampa di `update()`, passo massimo 16 per ciclo.
-2. Idle (se attivo e full speed spento): 900 fisso, senza rampa.
-3. Spento: 0, a meno che sia in corso un eject.
+1. **Full Speed** (se attivo): sale gradualmente fino a `TARGET_VELOCITY` (2000) tramite la rampa del metodo `update()`, passo massimo 16 per ciclo, per evitare sbalzi di corrente.
+2. **Idle** (se attivo e Full Speed spento): velocità fissa `IDLE_VELOCITY` (900), senza rampa.
+3. **Spento**: velocità 0, a meno che sia in corso un outtake con flywheel fermo (vedi sotto).
 
-L'eject è pensato per liberare palline incastrate: parte solo se il flywheel è quasi fermo e lo spinge in senso opposto per un istante.
+La variabile `velocityok` abilita lo sparo (tasto A): diventa vera solo quando **entrambi** i flywheel superano **1750 RPM** con Full Speed attivo, e resta vera finché Full Speed non viene disattivato (si azzera immediatamente allo spegnimento). Lo sparo non guarda più la velocità istantanea al momento della pressione di A, ma questa variabile calcolata ogni ciclo.
 
-Lo sparo (tasto A) controlla `flywheel_left.getVelocity() > 1800` indipendentemente da idle/full speed, così parte solo quando il flywheel è davvero a regime.
-
-## Flywheel logic
+**Outtake "sicuro":** tenendo L1 (o R1/L1 a seconda del gamepad usato per i meccanismi), il comportamento dipende dallo stato del flywheel:
+- Flywheel **fermo** (Idle e Full Speed entrambi spenti, velocità < 50 RPM su entrambi i motori): l'intake va in reverse (0.4 / 0.7) e il flywheel viene spinto a **-600** per aiutare a liberare palline incastrate.
+- Flywheel **in moto** (Idle o Full Speed attivi, oppure velocità > 50 RPM): viene azionato solo lo slowintake a 0.9, senza toccare il flywheel — questo evita di lanciare palline in direzione sbagliata se si preme outtake per errore mentre il flywheel è a regime.
 
 Three possible states, in priority order:
 
-1. Full speed (if active): ramps up gradually to 2000 via `update()`, max step of 16 per loop.
-2. Idle (if active and full speed is off): fixed at 900, no ramping.
-3. Off: 0, unless an eject is in progress.
+1. **Full Speed** (if active): ramps up gradually to `TARGET_VELOCITY` (2000) via the `update()` method, max step 16 per cycle, to avoid current spikes.
+2. **Idle** (if active and Full Speed off): fixed at `IDLE_VELOCITY` (900), no ramping.
+3. **Off**: 0, unless an outtake is in progress with the flywheel stopped (see below).
 
-The eject is meant to clear jammed balls: it only fires if the flywheel is nearly stopped, pushing it in reverse briefly.
+The `velocityok` variable enables shooting (A button): it becomes true only when **both** flywheels exceed **1750 RPM** with Full Speed active, and stays true until Full Speed is turned off (resets immediately when it is). Shooting no longer checks instantaneous velocity at the moment A is pressed, but this variable, recomputed every cycle.
 
-Shooting (A button) checks `flywheel_left.getVelocity() > 1800` regardless of idle/full speed, so it only fires once the flywheel is actually up to speed.
+**"Safe" outtake:** holding L1 (or R1/L1 depending on which gamepad handles mechanisms), behavior depends on flywheel state:
+- Flywheel **stopped** (Idle and Full Speed both off, velocity < 50 RPM on both motors): intake reverses (0.4 / 0.7) and the flywheel is pushed to **-600** to help clear jammed balls.
+- Flywheel **spinning** (Idle or Full Speed active, or velocity > 50 RPM): only the slow intake runs at 0.9, without touching the flywheel — this prevents shooting balls the wrong way if outtake is pressed by mistake while the flywheel is up to speed.
 
----
+### 4.3 Slider
 
-## Costanti principali
+Due servo (`slider_dx` → `sliderRight`, `slider_sx` → `sliderLeft`, quest'ultimo con direzione invertita) controllati come **toggle** tra due posizioni fisse: `SIN` (dentro, 0.86) e `SOUT` (fuori, 0.0). Attivabile con X su gamepad2 in Claudio Mode, o con il touchpad del master in God Mode.
 
-- TARGET_VELOCITY = 2000 (flywheel full speed)
-- IDLE_VELOCITY = 900 (flywheel idle)
-- SERVO_CLOSE = 0.01
-- SERVO_OPEN = 0.22
-- SERVO_SHOOT = 0.12
-- maxStep = 16 (rampa massima per ciclo)
+> ⚠️ **Nota storica:** il 12/9 era stato provato un controllo analogico (R2 per aprire, L2 per chiudere, con posizione intermedia libera), poi abbandonato il giorno dopo tornando al toggle a due posizioni. Il commento Javadoc sopra il metodo `handleSlider` nel codice descrive ancora il vecchio comportamento analogico: è un residuo di documentazione non aggiornato, l'implementazione reale è quella a toggle descritta qui.
+>
+> ⚠️ **Bug noto:** la variabile `sliderPosition`, mostrata in telemetria ("Slider position"), non viene mai aggiornata dal toggle e resta sempre al valore iniziale (`SIN`, 0.86) indipendentemente dallo stato reale dello slider. La telemetria di posizione va quindi ignorata o corretta in una prossima revisione.
 
-## Main constants
+Two servos (`slider_dx` → `sliderRight`, `slider_sx` → `sliderLeft`, the latter reversed) controlled as a **toggle** between two fixed positions: `SIN` (in, 0.86) and `SOUT` (out, 0.0). Toggled with X on gamepad2 in Claudio Mode, or the master's touchpad in God Mode.
 
-- TARGET_VELOCITY = 2000 (flywheel full speed)
-- IDLE_VELOCITY = 900 (flywheel idle)
-- SERVO_CLOSE = 0.01
-- SERVO_OPEN = 0.22
-- SERVO_SHOOT = 0.12
-- maxStep = 16 (max ramp per loop)
+> ⚠️ **Historical note:** on 12/9 an analog control was tried (R2 to open, L2 to close, with a free intermediate position), then abandoned the next day in favor of the two-position toggle. The Javadoc comment above the `handleSlider` method in the code still describes the old analog behavior: this is stale documentation left in the code, the real implementation is the toggle described here.
+>
+> ⚠️ **Known bug:** the `sliderPosition` variable, shown in telemetry ("Slider position"), is never updated by the toggle and stays at its initial value (`SIN`, 0.86) regardless of the slider's actual state. The position telemetry should be ignored or fixed in a future revision.
 
----
+### 4.4 Climbing
 
-## Hardware richiesto (nomi di configurazione)
+Toggle attivabile con X (stesso tasto su driver in entrambe le modalità, condiviso tramite `handleClimbing`). Quando attivo, entrambi i motori di climbing (`climb_motor_int`, `climb_motor_est`) girano a `climbVelocity` (default 0.5, regolabile con D-pad su/giù in step di 0.1, range -0.9…0.9). Quando disattivato, potenza a 0.
 
-left_motor, right_motor, intake_motor, second_intake_motor, flywheel_left, flywheel_right (DcMotorEx con encoder), servitore_1, servitore_2, climb_motor_int, climb_motor_est.
+Toggle activated with X (same button on the driver in both modes, shared via `handleClimbing`). When active, both climbing motors (`climb_motor_int`, `climb_motor_est`) run at `climbVelocity` (default 0.5, adjustable with D-pad up/down in 0.1 steps, range -0.9…0.9). When off, power is 0.
 
-## Required hardware (configuration names)
+### 4.5 Servomotori (servitori)
 
-left_motor, right_motor, intake_motor, second_intake_motor, flywheel_left, flywheel_right (DcMotorEx with encoder), servitore_1, servitore_2, climb_motor_int, climb_motor_est.
+`servitoreRight` e `servitoreLeft` sono i servo che trattengono/rilasciano le palline. Hanno tre posizioni possibili gestite da costanti: `SERVO_CLOSE` (0.0), `SERVO_OPEN` (0.2, usata durante intake/outtake a seconda del toggle) e `SERVO_SHOOT` (0.2, usata solo durante lo sparo). Il toggle aperto/chiuso (B) determina quale delle due posizioni "di riposo" viene usata fuori dallo sparo.
 
----
+`servitoreRight` and `servitoreLeft` are the servos that hold/release balls. They have three possible positions managed by constants: `SERVO_CLOSE` (0.0), `SERVO_OPEN` (0.2, used during intake/outtake depending on the toggle) and `SERVO_SHOOT` (0.2, used only while shooting). The open/closed toggle (B) determines which of the two "resting" positions is used outside of shooting.
 
-## Note
+### 4.6 SoundPlayer (sperimentale, non funzionante)
 
-Tutti i toggle (Uster, Climbing, Flywheel Idle, Flywheel Full Speed, Servo, God Mode) usano edge detection standard: scattano una volta sola per pressione, non sfarfallano se il tasto resta premuto.
+Il 9/9 è stato tentato l'utilizzo di `com.qualcomm.ftccommon.SoundPlayer` per aggiungere feedback sonoro (ad es. per confermare lo sparo o il cambio modalità), ma il tentativo non ha funzionato: nel codice attuale l'import è commentato (`//import com.qualcomm.ftccommon.SoundPlayer;`) e non c'è alcuna chiamata attiva al sistema audio. Al momento il robot non produce alcun feedback sonoro; questa parte resta da riprendere in una futura iterazione.
 
-In God Mode la Uster Mode è esclusa di proposito, si guida solo in Arcade. Il mapping dei meccanismi in God Mode è stato scelto per non sovrapporsi ai comandi di guida/climbing già su gamepad1; se serve un mapping diverso basta cercare i riferimenti a `master.` nel codice.
-
-## Notes
-
-All toggles (Uster, Climbing, Flywheel Idle, Flywheel Full Speed, Servo, God Mode) use standard edge detection: they fire once per press, no flickering if the button stays held.
-
-Uster Mode is intentionally left out of God Mode, driving is Arcade-only there. The God Mode mechanism mapping was chosen to avoid overlapping with the drive/climbing controls already on gamepad1; if a different mapping is needed, just search for `master.` references in the code.
-
----
----
-
-# V2 - Aggiornamenti
-
-Questa sezione descrive cosa e' cambiato rispetto alla versione precedente del documento (sopra). Il testo v1 resta com'era per riferimento storico; qui sotto solo le differenze e le novita'.
-
-# V2 - Updates
-
-This section describes what changed compared to the previous version of this document (above). The v1 text stays as-is for historical reference; below are only the differences and new features.
+On 9/9 an attempt was made to use `com.qualcomm.ftccommon.SoundPlayer` to add audio feedback (e.g. to confirm shooting or a mode switch), but the attempt didn't work: in the current code the import is commented out (`//import com.qualcomm.ftccommon.SoundPlayer;`) and there is no active call to the audio system. The robot currently produces no sound feedback; this remains to be picked up in a future iteration.
 
 ---
 
-## Novita' principali / Main changes
+## 5. Costanti principali
+
+| Costante / Constant | Valore / Value | Note |
+|---|---|---|
+| `TARGET_VELOCITY` | 2000 | Flywheel Full Speed |
+| `IDLE_VELOCITY` | 900 | Flywheel Idle |
+| `SERVO_CLOSE` | 0.0 | Posizione servo chiusa |
+| `SERVO_OPEN` | 0.2 | Posizione servo aperta (intake/outtake) |
+| `SERVO_SHOOT` | 0.2 | Posizione servo durante sparo |
+| `SIN` | 0.86 | Slider dentro |
+| `SOUT` | 0.0 | Slider fuori |
+| `scale` (iniziale) | 0.75 | Marcia di partenza, range 0.25–1.0 |
+| `climbVelocity` (iniziale) | 0.5 | Range -0.9…0.9 |
+| `maxStep` (in `update()`) | 16 | Rampa massima flywheel per ciclo |
+| Soglia `velocityok` | > 1750 RPM | Su entrambi i flywheel, con Full Speed attivo |
+| Soglia outtake sicuro | < 50 RPM | Su entrambi i flywheel, per abilitare il -600 |
+
+---
+
+## 6. Hardware richiesto (nomi di configurazione)
+
+`left_motor`, `right_motor`, `intake_motor`, `second_intake_motor`, `flywheel_left`, `flywheel_right` (DcMotorEx con encoder), `servitore_1` (→ servitoreRight, REVERSE), `servitore_2` (→ servitoreLeft, FORWARD), `slider_dx` (→ sliderRight, FORWARD), `slider_sx` (→ sliderLeft, REVERSE), `climb_motor_int`, `climb_motor_est`.
+
+Required hardware (configuration names): `left_motor`, `right_motor`, `intake_motor`, `second_intake_motor`, `flywheel_left`, `flywheel_right` (DcMotorEx with encoder), `servitore_1` (→ servitoreRight, REVERSE), `servitore_2` (→ servitoreLeft, FORWARD), `slider_dx` (→ sliderRight, FORWARD), `slider_sx` (→ sliderLeft, REVERSE), `climb_motor_int`, `climb_motor_est`.
+
+---
+
+## 7. Note generali e problemi noti
 
 Italiano:
 
-- Aggiunto un controllo unico di velocita' prima dello sparo: la variabile `velocityok` diventa vera solo quando entrambi i flywheel superano 1700 RPM con il Full Speed attivo, e resta vera finche' il Full Speed non viene disattivato. Lo sparo (tasto A) ora richiede `velocityok`, non piu' una soglia diretta sul singolo motore.
-- Lo sparo ora porta i servo su `SERVO_SHOOT` (0.12) invece di `SERVO_OPEN`, e la potenza dell'intake durante lo sparo e' -0.8 invece di -1.
-- Tenendo premuto outtake (left bumper), oltre a invertire l'intake, il flywheel viene spinto a -500 per aiutare a liberare palline incastrate. Questo vale ora sia in Claudio Mode che in God Mode.
-- I tasti per Idle e Full Speed del flywheel sono stati scambiati: ora Y attiva/disattiva il Full Speed e X (in Claudio Mode) o D-pad sinistra (in God Mode) attiva/disattiva l'Idle. In God Mode X resta occupato dal Climbing, per questo li' l'Idle e' su D-pad sinistra invece che su X.
-- La funzione di Eject (che spingeva il flywheel a -500 con D-pad su/destra quando quasi fermo) e' stata rimossa in entrambe le modalita'.
-- `SERVO_OPEN` e' stato modificato da 0.22 a 0.17.
-- Aggiunta una riga di telemetria "Velocity OK" per vedere a colpo d'occhio se lo sparo e' abilitato.
+- Tutti i toggle (Uster, Climbing, Flywheel Idle, Flywheel Full Speed, Servo, Slider, God Mode) usano edge detection standard: scattano una volta sola per pressione, non sfarfallano se il tasto resta premuto.
+- In God Mode la Uster Mode è esclusa di proposito, si guida solo in Arcade.
+- La schermata di init è stata semplificata: il "Jolly Roger" mostrato in passato è stato rimosso dalla chiamata (il metodo esiste ancora nel codice ma non viene più invocato).
+- Il commento Javadoc di `handleSlider` nel codice sorgente descrive ancora il vecchio comportamento a trigger analogici (12/9): va aggiornato per riflettere il toggle attuale.
+- La telemetria "Slider position" mostra un valore statico (`sliderPosition`, mai aggiornato) e non riflette lo stato reale dello slider: da correggere.
+- Il sistema SoundPlayer è presente solo come tentativo, con import disattivato: nessun suono viene attualmente riprodotto dal robot.
 
 English:
 
-- Added a single velocity check before shooting: the `velocityok` variable becomes true only when both flywheels exceed 1700 RPM with Full Speed active, and stays true until Full Speed is turned off. Shooting (A button) now requires `velocityok`, instead of a direct threshold on a single motor.
-- Shooting now moves the servos to `SERVO_SHOOT` (0.12) instead of `SERVO_OPEN`, and intake power during shooting is -0.8 instead of -1.
-- Holding outtake (left bumper), besides reversing the intake, now also pushes the flywheel to -500 to help clear jammed balls. This now applies to both Claudio Mode and God Mode.
-- The Idle and Full Speed flywheel buttons were swapped: Y now toggles Full Speed, and X (Claudio Mode) or D-pad left (God Mode) toggles Idle. In God Mode, X is still used for Climbing, which is why Idle was moved to D-pad left there.
-- The Eject function (which pushed the flywheel to -500 via D-pad up/right when nearly stopped) has been removed in both modes.
-- `SERVO_OPEN` was changed from 0.22 to 0.17.
-- Added a "Velocity OK" telemetry line to see at a glance whether shooting is enabled.
-
----
-
-## Tasti aggiornati - Claudio Mode, Gamepad2 (meccanismi) / Updated buttons - Claudio Mode, Gamepad2 (mechanisms)
-
-Italiano:
-
-- A (croce): sparo, apre i servo su SERVO_SHOOT e attiva l'intake a -0.8 (solo se `velocityok` e' vera)
-- B (cerchio): toggle servo aperto/chiuso
-- X (quadrato): toggle flywheel idle (900 RPM)
-- Y (triangolo): toggle flywheel full speed (2000 RPM)
-- R1: intake
-- L1: outtake, spinge anche il flywheel a -500
-- Eject rimosso (non piu' presente su D-pad)
-
-English:
-
-- A (cross): shoot, moves the servos to SERVO_SHOOT and runs intake at -0.8 (only if `velocityok` is true)
-- B (circle): toggle servo open/closed
-- X (square): toggle flywheel idle (900 RPM)
-- Y (triangle): toggle flywheel full speed (2000 RPM)
-- R1: intake
-- L1: outtake, also pushes the flywheel to -500
-- Eject removed (no longer on D-pad)
-
----
-
-## Tasti aggiornati - God Mode (gamepad master) / Updated buttons - God Mode (master gamepad)
-
-Italiano:
-
-- A: sparo, stessa logica di Claudio Mode (richiede `velocityok`)
-- B: toggle servo aperto/chiuso
-- X: toggle Climbing Mode (invariato)
-- Y: toggle flywheel full speed
-- D-pad sinistra: toggle flywheel idle
-- D-pad su/giu: regola velocita' di climbing (invariato)
-- L1: outtake, spinge anche il flywheel a -500
-- R1: intake
-- Eject rimosso (non piu' presente su D-pad destra)
-
-English:
-
-- A: shoot, same logic as Claudio Mode (requires `velocityok`)
-- B: toggle servo open/closed
-- X: toggle Climbing Mode (unchanged)
-- Y: toggle flywheel full speed
-- D-pad left: toggle flywheel idle
-- D-pad up/down: adjust climb speed (unchanged)
-- L1: outtake, also pushes the flywheel to -500
-- R1: intake
-- Eject removed (no longer on D-pad right)
-
----
-
-## Logica del flywheel aggiornata / Updated flywheel logic
-
-Italiano:
-
-Le priorita' restano le stesse (Full Speed > Idle > spento), ma con due differenze:
-
-- Quando ne' Full Speed ne' Idle sono attivi, il flywheel va a 0 a meno che si stia tenendo premuto outtake, nel qual caso resta a -500 (invece che essere subito sovrascritto a 0).
-- Lo sparo non guarda piu' la velocita' istantanea al momento della pressione di A, ma la variabile `velocityok`, calcolata ogni ciclo prima del controllo dei tasti: si azzera appena il Full Speed si spegne, e diventa vera (restando tale) quando entrambi i motori superano 1700 RPM.
-
-English:
-
-The priority order stays the same (Full Speed > Idle > off), with two differences:
-
-- When neither Full Speed nor Idle is active, the flywheel goes to 0 unless outtake is being held, in which case it stays at -500 (instead of being immediately overwritten to 0).
-- Shooting no longer checks the instantaneous velocity at the moment A is pressed; instead it checks the `velocityok` variable, computed every loop before reading the buttons: it resets to false as soon as Full Speed is turned off, and becomes true (and stays true) once both motors exceed 1700 RPM.
-
----
-
-## Refactoring del codice / Code refactoring
-
-Italiano:
-
-La struttura interna del programma e' stata riorganizzata per eliminare la duplicazione tra Claudio Mode e God Mode. Prima, guida, climbing e meccanismi erano scritti due volte (una copia per modalita'), con il rischio di modificare una copia e dimenticare l'altra. Ora la logica vive in metodi condivisi, richiamati da entrambe le modalita':
-
-- `driveArcade(throttle, spin)`: calcola le potenze motore per la guida Arcade.
-- `applyGearAndDrive(Gamepad g)`: gestisce il cambio marcia e invia la potenza ai motori di trazione.
-- `handleClimbing(Gamepad g)`: gestisce il toggle Climbing e la regolazione della sua velocita'. Stessi tasti in entrambe le modalita' (X, D-pad su/giu), quindi basta passare il gamepad giusto.
-- `handleMechanisms(...)`: gestisce servo, sparo, intake/outtake e flywheel. Non riceve un gamepad intero ma i singoli tasti gia' letti dal chiamante, perche' Idle e Full Speed usano tasti diversi tra le due modalita' (per evitare conflitti in God Mode, dove climbing e meccanismi condividono lo stesso gamepad).
-
-Nel loop principale, due variabili (`driver` e `operator`) puntano al gamepad giusto a seconda della modalita' attiva; le chiamate ai metodi condivisi restano identiche, cambia solo quale gamepad fisico viene passato.
-
-Comportamento a runtime: nessuna modifica rispetto a prima del refactoring, a parita' di funzionalita' descritte sopra. Cambia solo l'organizzazione interna del codice, per rendere piu' facile mantenere le due modalita' allineate in futuro.
-
-English:
-
-The program's internal structure was reorganized to eliminate duplication between Claudio Mode and God Mode. Previously, driving, climbing and mechanisms were each written twice (one copy per mode), risking that one copy gets updated while the other is forgotten. Now the logic lives in shared methods, called by both modes:
-
-- `driveArcade(throttle, spin)`: computes motor power for Arcade driving.
-- `applyGearAndDrive(Gamepad g)`: handles gear shifting and sends power to the drive motors.
-- `handleClimbing(Gamepad g)`: handles the Climbing toggle and speed adjustment. Same buttons in both modes (X, D-pad up/down), so it just needs the right gamepad passed in.
-- `handleMechanisms(...)`: handles servo, shooting, intake/outtake and the flywheel. It doesn't take a whole gamepad, but individual button values already read by the caller, because Idle and Full Speed use different buttons between the two modes (to avoid conflicts in God Mode, where climbing and mechanisms share the same gamepad).
-
-In the main loop, two variables (`driver` and `operator`) point to the correct gamepad depending on the active mode; calls to the shared methods stay identical, only which physical gamepad gets passed in changes.
-
-Runtime behavior: unchanged compared to before the refactor, given the same features described above. Only the internal code organization changes, to make it easier to keep the two modes in sync going forward.
-
----
-
-## Costanti aggiornate / Updated constants
-
-- SERVO_OPEN = 0.17 (era 0.22 / was 0.22)
-- SERVO_SHOOT = 0.12 (nuova costante, usata solo durante lo sparo / new constant, used only while shooting)
-- TARGET_VELOCITY, IDLE_VELOCITY, SERVO_CLOSE, maxStep: invariati / unchanged
-
----
----
-
-# V3 - Aggiornamenti
-
-Questa sezione descrive cosa e' cambiato rispetto alla V2. Il testo delle versioni precedenti resta invariato per riferimento storico.
-
-# V3 - Updates
-
-This section describes what changed since V2. Previous version text stays unchanged for historical reference.
-
----
-
-## Novita' principali / Main changes
-
-Italiano:
-
-- Aggiunto lo slider: due servo (slider_dx, slider_sx) controllati dall'operatore tramite un toggle. In Claudio Mode il tasto e' X (quadrato) su gamepad2; in God Mode e' il touchpad del master. Lo slider passa tra due posizioni fisse: SIN (dentro, 0.86) e SOUT (fuori, 0.0).
-- La logica di outtake e' stata resa piu' sicura: il flywheel in retromarcia (-600) scatta solo se idle e full speed sono entrambi spenti e la velocita' di entrambi i flywheel e' sotto 50 RPM. Se si preme outtake con il flywheel ancora in moto, viene azionato solo lo slowintake (0.9) senza toccare il flywheel, evitando di lanciare palline al contrario.
-- Le chiamate alle funzioni handle sono state spostate dentro i due rami if/else (fullController / Claudio Mode), rendendo esplicita la mappa tasti per ciascuna modalita'. In precedenza i due rami chiamavano la stessa funzione con parametri diversi; ora e' immediato vedere quale tasto fa cosa in quale modalita'.
-- Rimosso il Jolly Roger dalla schermata di init (rimane il metodo nel codice, non e' piu' chiamato).
-- Rimosso l'import di SoundPlayer (commentato).
-- TARGET_VELOCITY portato da 1700 a 2000.
-- SERVO_OPEN e SERVO_SHOOT portati entrambi a 0.2.
-- SIN e SOUT invertiti rispetto alla versione precedente (SIN = 0.86, SOUT = 0.0) per adattarsi alla nuova geometria fisica dello slider dopo il rifacimento degli zero servo.
-- In God Mode, il toggle Idle e' stato spostato da dpad_left a right_stick_button per liberare il D-pad per altri usi.
-
-English:
-
-- Added the slider: two servos (slider_dx, slider_sx) controlled by the operator via a toggle. In Claudio Mode the button is X (square) on gamepad2; in God Mode it is the master's touchpad. The slider switches between two fixed positions: SIN (in, 0.86) and SOUT (out, 0.0).
-- Outtake logic is now safer: the flywheel in reverse (-600) only fires if both idle and full speed are off and both flywheel velocities are below 50 RPM. If outtake is pressed while the flywheel is still spinning, only the slow intake motor runs (0.9) without touching the flywheel, avoiding shooting balls backward.
-- Handle function calls were moved inside the two if/else branches (fullController / Claudio Mode), making the button map for each mode explicit. Previously both branches called the same function with different parameters; now it is immediately clear which button does what in which mode.
-- Jolly Roger removed from the init screen (the method is still in the code, just no longer called).
-- SoundPlayer import removed (commented out).
-- TARGET_VELOCITY raised from 1700 to 2000.
-- SERVO_OPEN and SERVO_SHOOT both set to 0.2.
-- SIN and SOUT swapped compared to the previous version (SIN = 0.86, SOUT = 0.0) to match the new physical geometry of the slider after the servo zeros were redone.
-- In God Mode, the Idle toggle was moved from dpad_left to right_stick_button to free up the D-pad for other uses.
-
----
-
-## Tasti aggiornati - Claudio Mode, Gamepad1 (guida) / Updated buttons - Claudio Mode, Gamepad1 (driver)
-
-Italiano: invariati rispetto alla V2.
-
-English: unchanged from V2.
-
----
-
-## Tasti aggiornati - Claudio Mode, Gamepad2 (meccanismi) / Updated buttons - Claudio Mode, Gamepad2 (operator)
-
-Italiano:
-
-- A (croce): sparo (richiede velocityok, invariato)
-- B (cerchio): toggle servo aperto/chiuso (invariato)
-- X (quadrato): toggle slider aperto/chiuso (cambiato: era toggle flywheel idle)
-- Y (triangolo): toggle flywheel full speed (invariato)
-- Touchpad: toggle flywheel idle (cambiato: era X quadrato)
-- R1: intake (invariato)
-- L1: outtake sicuro (flywheel in retromarcia solo se fermo, altrimenti solo slowintake)
-- L3+R3: attiva God Mode (invariato)
-
-English:
-
-- A (cross): shoot (requires velocityok, unchanged)
-- B (circle): toggle servo open/closed (unchanged)
-- X (square): toggle slider open/closed (changed: was flywheel idle toggle)
-- Y (triangle): toggle flywheel full speed (unchanged)
-- Touchpad: toggle flywheel idle (changed: was X square)
-- R1: intake (unchanged)
-- L1: safe outtake (flywheel reverse only if stopped, otherwise only slow intake)
-- L3+R3: activate God Mode (unchanged)
-
----
-
-## Tasti aggiornati - God Mode (gamepad master) / Updated buttons - God Mode (master gamepad)
-
-Italiano:
-
-- Stick sinistro/destro: guida Arcade (invariato)
-- A: sparo (richiede velocityok, invariato)
-- B: toggle servo aperto/chiuso (invariato)
-- X: toggle Climbing Mode (invariato)
-- Y: toggle flywheel full speed (invariato)
-- R3 (stick destro premuto): toggle flywheel idle (cambiato: era D-pad sinistra)
-- Touchpad: toggle slider aperto/chiuso (nuovo)
-- D-pad su/giu: regola velocita' di climbing (invariato)
-- R1: intake (invariato)
-- L1: outtake sicuro (invariato nella logica, vedi sopra)
-- L2/R2: marcia giu'/su (invariato)
-- L3+R3: disattiva God Mode (invariato)
-
-English:
-
-- Left/right stick: Arcade drive (unchanged)
-- A: shoot (requires velocityok, unchanged)
-- B: toggle servo open/closed (unchanged)
-- X: toggle Climbing Mode (unchanged)
-- Y: toggle flywheel full speed (unchanged)
-- R3 (right stick button): toggle flywheel idle (changed: was D-pad left)
-- Touchpad: toggle slider open/closed (new)
-- D-pad up/down: adjust climb speed (unchanged)
-- R1: intake (unchanged)
-- L1: safe outtake (logic unchanged, see above)
-- L2/R2: gear down/up (unchanged)
-- L3+R3: deactivate God Mode (unchanged)
-
----
-
-## Logica outtake aggiornata / Updated outtake logic
-
-Italiano:
-
-L'outtake ora distingue due casi in base allo stato del flywheel:
-
-- Flywheel fermo (idle e full speed spenti, velocita' < 50 RPM su entrambi): l'intake va in reverse (0.4 / 0.7), il flywheel viene spinto a -600 per aiutare a liberare palline incastrate.
-- Flywheel in moto (idle o full speed attivi, oppure velocita' > 50 RPM): viene azionato solo lo slowintake a 0.9, senza toccare il flywheel. Questo evita di lanciare palline in direzione sbagliata se si preme outtake per errore mentre il flywheel e' ancora a regime.
-
-English:
-
-Outtake now distinguishes two cases based on the flywheel state:
-
-- Flywheel stopped (idle and full speed both off, velocity < 50 RPM on both): intake runs in reverse (0.4 / 0.7), flywheel is pushed to -600 to help clear jammed balls.
-- Flywheel spinning (idle or full speed active, or velocity > 50 RPM): only the slow intake runs at 0.9, without touching the flywheel. This prevents shooting balls backward if outtake is pressed by mistake while the flywheel is still up to speed.
-
----
-
-## Costanti aggiornate / Updated constants
-
-- TARGET_VELOCITY = 2000 (era 1700 / was 1700)
-- SERVO_OPEN = 0.2 (era 0.17 / was 0.17)
-- SERVO_SHOOT = 0.2 (era 0.12 / was 0.12)
-- SIN = 0.86, SOUT = 0.0 (invertiti rispetto alla V2 / swapped compared to V2)
-- SLIDER_STEP e TRIGGER_DEADZONE: rimossi (lo slider ora e' un toggle, non piu' analogico / removed, slider is now a toggle not analog)
-- SERVO_CLOSE, IDLE_VELOCITY, maxStep: invariati / unchanged
+- All toggles (Uster, Climbing, Flywheel Idle, Flywheel Full Speed, Servo, Slider, God Mode) use standard edge detection: they fire once per press, no flickering if the button stays held.
+- Uster Mode is intentionally excluded from God Mode; driving is Arcade-only there.
+- The init screen was simplified: the previously shown "Jolly Roger" was removed from the call (the method is still in the code but is no longer invoked).
+- The Javadoc comment on `handleSlider` in the source still describes the old analog-trigger behavior (12/9): it should be updated to reflect the current toggle.
+- The "Slider position" telemetry shows a static value (`sliderPosition`, never updated) and does not reflect the slider's real state: this should be fixed.
+- The SoundPlayer system is present only as an attempt, with the import disabled: no sound is currently played by the robot.

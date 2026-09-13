@@ -325,3 +325,139 @@ Runtime behavior: unchanged compared to before the refactor, given the same feat
 - SERVO_OPEN = 0.17 (era 0.22 / was 0.22)
 - SERVO_SHOOT = 0.12 (nuova costante, usata solo durante lo sparo / new constant, used only while shooting)
 - TARGET_VELOCITY, IDLE_VELOCITY, SERVO_CLOSE, maxStep: invariati / unchanged
+
+---
+---
+
+# V3 - Aggiornamenti
+
+Questa sezione descrive cosa e' cambiato rispetto alla V2. Il testo delle versioni precedenti resta invariato per riferimento storico.
+
+# V3 - Updates
+
+This section describes what changed since V2. Previous version text stays unchanged for historical reference.
+
+---
+
+## Novita' principali / Main changes
+
+Italiano:
+
+- Aggiunto lo slider: due servo (slider_dx, slider_sx) controllati dall'operatore tramite un toggle. In Claudio Mode il tasto e' X (quadrato) su gamepad2; in God Mode e' il touchpad del master. Lo slider passa tra due posizioni fisse: SIN (dentro, 0.86) e SOUT (fuori, 0.0).
+- La logica di outtake e' stata resa piu' sicura: il flywheel in retromarcia (-600) scatta solo se idle e full speed sono entrambi spenti e la velocita' di entrambi i flywheel e' sotto 50 RPM. Se si preme outtake con il flywheel ancora in moto, viene azionato solo lo slowintake (0.9) senza toccare il flywheel, evitando di lanciare palline al contrario.
+- Le chiamate alle funzioni handle sono state spostate dentro i due rami if/else (fullController / Claudio Mode), rendendo esplicita la mappa tasti per ciascuna modalita'. In precedenza i due rami chiamavano la stessa funzione con parametri diversi; ora e' immediato vedere quale tasto fa cosa in quale modalita'.
+- Rimosso il Jolly Roger dalla schermata di init (rimane il metodo nel codice, non e' piu' chiamato).
+- Rimosso l'import di SoundPlayer (commentato).
+- TARGET_VELOCITY portato da 1700 a 2000.
+- SERVO_OPEN e SERVO_SHOOT portati entrambi a 0.2.
+- SIN e SOUT invertiti rispetto alla versione precedente (SIN = 0.86, SOUT = 0.0) per adattarsi alla nuova geometria fisica dello slider dopo il rifacimento degli zero servo.
+- In God Mode, il toggle Idle e' stato spostato da dpad_left a right_stick_button per liberare il D-pad per altri usi.
+
+English:
+
+- Added the slider: two servos (slider_dx, slider_sx) controlled by the operator via a toggle. In Claudio Mode the button is X (square) on gamepad2; in God Mode it is the master's touchpad. The slider switches between two fixed positions: SIN (in, 0.86) and SOUT (out, 0.0).
+- Outtake logic is now safer: the flywheel in reverse (-600) only fires if both idle and full speed are off and both flywheel velocities are below 50 RPM. If outtake is pressed while the flywheel is still spinning, only the slow intake motor runs (0.9) without touching the flywheel, avoiding shooting balls backward.
+- Handle function calls were moved inside the two if/else branches (fullController / Claudio Mode), making the button map for each mode explicit. Previously both branches called the same function with different parameters; now it is immediately clear which button does what in which mode.
+- Jolly Roger removed from the init screen (the method is still in the code, just no longer called).
+- SoundPlayer import removed (commented out).
+- TARGET_VELOCITY raised from 1700 to 2000.
+- SERVO_OPEN and SERVO_SHOOT both set to 0.2.
+- SIN and SOUT swapped compared to the previous version (SIN = 0.86, SOUT = 0.0) to match the new physical geometry of the slider after the servo zeros were redone.
+- In God Mode, the Idle toggle was moved from dpad_left to right_stick_button to free up the D-pad for other uses.
+
+---
+
+## Tasti aggiornati - Claudio Mode, Gamepad1 (guida) / Updated buttons - Claudio Mode, Gamepad1 (driver)
+
+Italiano: invariati rispetto alla V2.
+
+English: unchanged from V2.
+
+---
+
+## Tasti aggiornati - Claudio Mode, Gamepad2 (meccanismi) / Updated buttons - Claudio Mode, Gamepad2 (operator)
+
+Italiano:
+
+- A (croce): sparo (richiede velocityok, invariato)
+- B (cerchio): toggle servo aperto/chiuso (invariato)
+- X (quadrato): toggle slider aperto/chiuso (cambiato: era toggle flywheel idle)
+- Y (triangolo): toggle flywheel full speed (invariato)
+- Touchpad: toggle flywheel idle (cambiato: era X quadrato)
+- R1: intake (invariato)
+- L1: outtake sicuro (flywheel in retromarcia solo se fermo, altrimenti solo slowintake)
+- L3+R3: attiva God Mode (invariato)
+
+English:
+
+- A (cross): shoot (requires velocityok, unchanged)
+- B (circle): toggle servo open/closed (unchanged)
+- X (square): toggle slider open/closed (changed: was flywheel idle toggle)
+- Y (triangle): toggle flywheel full speed (unchanged)
+- Touchpad: toggle flywheel idle (changed: was X square)
+- R1: intake (unchanged)
+- L1: safe outtake (flywheel reverse only if stopped, otherwise only slow intake)
+- L3+R3: activate God Mode (unchanged)
+
+---
+
+## Tasti aggiornati - God Mode (gamepad master) / Updated buttons - God Mode (master gamepad)
+
+Italiano:
+
+- Stick sinistro/destro: guida Arcade (invariato)
+- A: sparo (richiede velocityok, invariato)
+- B: toggle servo aperto/chiuso (invariato)
+- X: toggle Climbing Mode (invariato)
+- Y: toggle flywheel full speed (invariato)
+- R3 (stick destro premuto): toggle flywheel idle (cambiato: era D-pad sinistra)
+- Touchpad: toggle slider aperto/chiuso (nuovo)
+- D-pad su/giu: regola velocita' di climbing (invariato)
+- R1: intake (invariato)
+- L1: outtake sicuro (invariato nella logica, vedi sopra)
+- L2/R2: marcia giu'/su (invariato)
+- L3+R3: disattiva God Mode (invariato)
+
+English:
+
+- Left/right stick: Arcade drive (unchanged)
+- A: shoot (requires velocityok, unchanged)
+- B: toggle servo open/closed (unchanged)
+- X: toggle Climbing Mode (unchanged)
+- Y: toggle flywheel full speed (unchanged)
+- R3 (right stick button): toggle flywheel idle (changed: was D-pad left)
+- Touchpad: toggle slider open/closed (new)
+- D-pad up/down: adjust climb speed (unchanged)
+- R1: intake (unchanged)
+- L1: safe outtake (logic unchanged, see above)
+- L2/R2: gear down/up (unchanged)
+- L3+R3: deactivate God Mode (unchanged)
+
+---
+
+## Logica outtake aggiornata / Updated outtake logic
+
+Italiano:
+
+L'outtake ora distingue due casi in base allo stato del flywheel:
+
+- Flywheel fermo (idle e full speed spenti, velocita' < 50 RPM su entrambi): l'intake va in reverse (0.4 / 0.7), il flywheel viene spinto a -600 per aiutare a liberare palline incastrate.
+- Flywheel in moto (idle o full speed attivi, oppure velocita' > 50 RPM): viene azionato solo lo slowintake a 0.9, senza toccare il flywheel. Questo evita di lanciare palline in direzione sbagliata se si preme outtake per errore mentre il flywheel e' ancora a regime.
+
+English:
+
+Outtake now distinguishes two cases based on the flywheel state:
+
+- Flywheel stopped (idle and full speed both off, velocity < 50 RPM on both): intake runs in reverse (0.4 / 0.7), flywheel is pushed to -600 to help clear jammed balls.
+- Flywheel spinning (idle or full speed active, or velocity > 50 RPM): only the slow intake runs at 0.9, without touching the flywheel. This prevents shooting balls backward if outtake is pressed by mistake while the flywheel is still up to speed.
+
+---
+
+## Costanti aggiornate / Updated constants
+
+- TARGET_VELOCITY = 2000 (era 1700 / was 1700)
+- SERVO_OPEN = 0.2 (era 0.17 / was 0.17)
+- SERVO_SHOOT = 0.2 (era 0.12 / was 0.12)
+- SIN = 0.86, SOUT = 0.0 (invertiti rispetto alla V2 / swapped compared to V2)
+- SLIDER_STEP e TRIGGER_DEADZONE: rimossi (lo slider ora e' un toggle, non piu' analogico / removed, slider is now a toggle not analog)
+- SERVO_CLOSE, IDLE_VELOCITY, maxStep: invariati / unchanged

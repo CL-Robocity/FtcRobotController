@@ -60,6 +60,30 @@ aggiustamento altezze di flywheel e intake, modifica rampa con discesa, creazion
 
  */
 
+/*programma caricato e aggiornato 12/9/26
+SOFTWARE
+handleSlider: controllo posizione slider tramite trigger analogici dell'operatore.
+R2 incrementa la posizione verso SOUT, L2 la decrementa verso SIN.
+Nessun trigger premuto = posizione bloccata all'ultimo valore.
+Aggiunta telemetria posizione slider in tempo reale.
+
+HARDWARE
+finito ma non funzionante lo slider con intake
+tentativo di sparo in retromarcia con vecchio drivetrain
+
+programma caricato e aggiornato 13/9/26
+SOFTWARE
+aggiunta controllo sicurezza per flywheel con outtake etc
+modificati sin e sout per nuove lunghezze servo e reso toggle rimuovendo funzione ausiliaria di ieri
+inserite tutte le funzioni nel if (fullcontroller) cosi da avere due mappe diverse dei controlli in god e claudio mode
+
+HARDWARE
+aggiunta plexiglass frontale per parziale chiusura intake anche da aperto, manca la rete.
+abbassato uno dei 4 pezzi della rampa per arrampicarsi meglio
+rifatti gli zero di entrambi i servo
+
+
+ */
 
 package org.firstinspires.ftc.teamcode;
 
@@ -73,7 +97,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 //import com.qualcomm.robotcore.util.ElapsedTime;
 //import com.qualcomm.robotcore.hardware.DigitalChannel;
-import com.qualcomm.ftccommon.SoundPlayer;
+//import com.qualcomm.ftccommon.SoundPlayer;
 
 
 /*
@@ -115,7 +139,7 @@ import com.qualcomm.ftccommon.SoundPlayer;
  *                              GAMEPAD 2 | MECCANISMI (OPERATOR)
  * =========================================================================================
  *
- *       [L2] ---                                                [R2] ---
+ *       [L2] Slider GIÙ (decrementa posizione)                  [R2] Slider SÙ (incrementa posizione)
  *       [L1] Outtake (spinge anche il flywheel a -500)          [R1] Intake (Aspirazione)
  *
  *              .---| DPAD |---.                                    .---| TASTI |---.
@@ -139,21 +163,6 @@ import com.qualcomm.ftccommon.SoundPlayer;
 @TeleOp (name = "testmodificheuniche",group = "TeleOp Competition")
 public class TeleOpMovements_NewControl extends LinearOpMode {
 
-    private void showJollyRoger(){
-        telemetry.addLine("          .....          ");
-        telemetry.addLine(" ---- .-+-.....-+-. -+-- ");
-        telemetry.addLine("+...+-+.         .+-+...+");
-        telemetry.addLine("-#++-+.          ..#-++#-");
-        telemetry.addLine("     +..-++. .++-..+.    ");
-        telemetry.addLine("     .#.###. .###.#.     ");
-        telemetry.addLine("     .+. ..-#-.  .+.     ");
-        telemetry.addLine("  ...+..++.... +#..+.... ");
-        telemetry.addLine(".#.  .+..+-...-+..+.. .+.");
-        telemetry.addLine("  +..-             -..+. ");
-        telemetry.addLine("   ...             ....  ");
-    }
-
-
     //private final ElapsedTime timerServo = new ElapsedTime();
 
     // DICHIARARE I MOTORI
@@ -171,12 +180,12 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean bStateBeforeServo = false; // stato precedente del tasto per rilevare il click (edge detection)
 
     // USE: COSTANTI / VARIABILI con valore predefinito
-    private static final int TARGET_VELOCITY = 1700;
+    private static final int TARGET_VELOCITY = 2000;
     private static final int IDLE_VELOCITY = 900;
-    private static final double SERVO_CLOSE = 0.01;
-    private static final double SERVO_OPEN = 0.17;
+    private static final double SERVO_CLOSE = 0.0;
+    private static final double SERVO_OPEN = 0.2;
 
-    private static final double SERVO_SHOOT = 0.12;
+    private static final double SERVO_SHOOT = 0.2;
     double scale = 0.75;
     double climbVelocity = 0.5;
 
@@ -213,17 +222,14 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean lastDownDpad = false;
 
     //USE: SLIDER
-    private static final double SOUT = 1;
-    private static final double SIN = 0;
-    boolean optionsStateBefore = false;
-    boolean isSliderOpen = false;
+    private static final double SOUT = 0;
+    private static final double SIN = 0.86;
+    boolean sliderStateBefore = false;
+    boolean isSliderOpen = false;          // mantenuto per uso futuro
+    double sliderPosition = SIN;
 
     @Override
     public void runOpMode() throws InterruptedException{
-
-        /// INITIALIZING SENSORS
-        // magneticLimit = hardwareMap.get(DigitalChannel.class, "magnetic_limit_slider");
-        // magneticLimit.setMode(DigitalChannel.Mode.INPUT);
 
         /// INITIALIZING MOTORS
         leftMotor = hardwareMap.get(DcMotor.class, "left_motor");
@@ -247,7 +253,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         leftMotor.setDirection(DcMotor.Direction.REVERSE);
         rightMotor.setDirection(DcMotor.Direction.FORWARD);
         upIntakeMotor.setDirection(DcMotor.Direction.FORWARD); // è invertito (-1 intake, +1 outtake)
-        upIntakeSlowMotor.setDirection(DcMotor.Direction.FORWARD);
+        upIntakeSlowMotor.setDirection(DcMotor.Direction.REVERSE);
 
         flywheel_right.setDirection(DcMotorEx.Direction.REVERSE);
         flywheel_left.setDirection(DcMotorEx.Direction.REVERSE);
@@ -362,20 +368,13 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 driveArcade(-driver.left_stick_y, driver.right_stick_x);
             }
 
-            applyGearAndDrive(
-                    driver.right_trigger > 0.5, // Marcia SÙ
-                    driver.left_trigger > 0.5   // Marcia GIÙ
-            );
-
             // -*=======*- CLIMBING -*=======*-
             // Stessa logica e stessi tasti (X, dpad su/giù) sia in Claudio che in God Mode:
             // basta passare il gamepad giusto.
 
-            handleClimbing(driver.x, driver.dpad_up, driver.dpad_down);
-
             // -*=======*- SLIDER -*=======*-
-
-            handleSlider(driver.right_stick_button);
+            // R2 dell'operatore incrementa la posizione verso SOUT (fuori),
+            // L2 la decrementa verso SIN (dentro), nessun trigger = posizione bloccata.
 
             // -*=======*- MECCANISMI (intake, sparo, servo, flywheel) -*=======*-
             // Stessa logica in entrambe le modalità. Cambiano solo i TASTI usati per
@@ -385,19 +384,40 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             // quindi non c'è conflitto e l'Idle resta su X.
 
             if (fullController){
+                applyGearAndDrive(
+                        driver.right_trigger > 0.5, // Marcia SÙ
+                        driver.left_trigger > 0.5   // Marcia GIÙ
+                );
+
+                handleClimbing(driver.x, driver.dpad_up, driver.dpad_down);
+
+                handleSlider(operator.touchpad);
+
                 handleMechanisms(
                         operator.a,            // sparo
                         operator.b,             // toggle servo
-                        operator.dpad_up,     // toggle Idle (spostato per non collidere con Climbing su X)
+                        operator.right_stick_button,     // toggle Idle (spostato per non collidere con Climbing su X)
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
                         operator.left_bumper    // outtake
                 );
+
+
+
             } else {
+                //DRIVER
+                applyGearAndDrive(
+                        driver.right_trigger > 0.5, // Marcia SÙ
+                        driver.left_trigger > 0.5   // Marcia GIÙ
+                );
+                handleClimbing(driver.x, driver.dpad_up, driver.dpad_down);
+
+                //OPERATOR
+                handleSlider(operator.x);
                 handleMechanisms(
                         operator.a,            // sparo
                         operator.b,             // toggle servo
-                        operator.x,             // toggle Idle
+                        operator.touchpad,             // toggle Idle
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
                         operator.left_bumper    // outtake
@@ -418,6 +438,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             telemetry.addData("Flywheel Full Speed", (flywheelFullSpeed) ? "ON" : "OFF");
             telemetry.addData("Velocity OK (sparo abilitato)", (velocityok) ? "YES" : "NO");
             telemetry.addData("Servo toggle state", (servoToggleOpen) ? "OPEN" : "CLOSE");
+            telemetry.addData("Slider position", String.format("%.3f", sliderPosition));
             telemetry.addData("Uster Mode:", (usterMode) ? "Activated" : "You're a louser, press B (solo Claudio Mode)");
             telemetry.addData("Full Control (God Mode)", (fullController) ? ("You are now ADMIN - Master: Gamepad" + (masterIsGamepad1 ? "1" : "2")) : "You are only CLAUDIO");
             telemetry.addData("Speed", (scale==1.0) ? 4 : (scale==0.75) ? 3 : (scale==0.5) ? 2 : (scale==0.25) ? 1 : "Folle");
@@ -524,25 +545,36 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
     //slider handle
     /**
-     * Gestisce l'apertura e la chiusura degli slider tramite toggle.
-     * Riceve lo stato booleano del pulsante per rendere il controllo indipendente dall'oggetto Gamepad.
+     * Gestisce la posizione degli slider tramite i trigger analogici dell'operatore.
      *
-     * @param toggleSliderBtn Tasto per invertire lo stato dello slider (es. driver.y o driver.options)
+     * R2 (triggerOut) incrementa la posizione verso SOUT (fuori).
+     * L2 (triggerIn) decrementa la posizione verso SIN (dentro).
+     * Nessun trigger premuto = posizione bloccata all'ultimo valore.
+     *
+     * Lo step per ciclo è proporzionale alla pressione del trigger: più si preme,
+     * più lo slider si muove velocemente. La posizione è sempre tenuta nei limiti
+     * [SIN, SOUT]. Per regolare la velocità di movimento cambia SLIDER_STEP.
+     *
+     *
      */
-    private void handleSlider(boolean toggleSliderBtn) {
+    private void handleSlider(boolean sliderBtn) {
 
-        if (toggleSliderBtn && !optionsStateBefore) {
+        if (sliderBtn && !sliderStateBefore) {
             isSliderOpen = !isSliderOpen;
         }
-        optionsStateBefore = toggleSliderBtn;
+        sliderStateBefore = sliderBtn;
 
-        if (isSliderOpen) {
+        if(isSliderOpen){
             sliderLeft.setPosition(SOUT);
             sliderRight.setPosition(SOUT);
-        } else {
+        }
+        else{
             sliderLeft.setPosition(SIN);
             sliderRight.setPosition(SIN);
         }
+
+
+
     }
 
     /**
@@ -603,7 +635,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             upIntakeMotor.setPower(-1);
             upIntakeSlowMotor.setPower(-1);
         }
-        else if (outtakeBtn) {
+        else if (outtakeBtn && !flywheelActivate && !flywheelFullSpeed && flywheel_right.getVelocity() < 50 && flywheel_left.getVelocity() < 50) {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
             servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
             upIntakeMotor.setPower(0.4);
@@ -613,11 +645,15 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             flywheel_left.setVelocity(-600);
             flywheel_right.setVelocity(-600);
         }
+        else if (outtakeBtn){
+            upIntakeSlowMotor.setPower(0.9);
+        }
         else {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
             servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
             upIntakeMotor.setPower(0);
             upIntakeSlowMotor.setPower(0);
+
         }
 
         // --- Toggle Idle ---

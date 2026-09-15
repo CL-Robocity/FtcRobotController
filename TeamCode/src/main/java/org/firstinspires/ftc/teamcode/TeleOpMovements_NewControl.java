@@ -97,7 +97,6 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 //import com.qualcomm.robotcore.util.ElapsedTime;
 //import com.qualcomm.robotcore.hardware.DigitalChannel;
-//import com.qualcomm.ftccommon.SoundPlayer;
 
 
 /*
@@ -438,7 +437,6 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             telemetry.addData("Flywheel Full Speed", (flywheelFullSpeed) ? "ON" : "OFF");
             telemetry.addData("Velocity OK (sparo abilitato)", (velocityok) ? "YES" : "NO");
             telemetry.addData("Servo toggle state", (servoToggleOpen) ? "OPEN" : "CLOSE");
-            telemetry.addData("Slider position", String.format("%.3f", sliderPosition));
             telemetry.addData("Uster Mode:", (usterMode) ? "Activated" : "You're a louser, press B (solo Claudio Mode)");
             telemetry.addData("Full Control (God Mode)", (fullController) ? ("You are now ADMIN - Master: Gamepad" + (masterIsGamepad1 ? "1" : "2")) : "You are only CLAUDIO");
             telemetry.addData("Speed", (scale==1.0) ? 4 : (scale==0.75) ? 3 : (scale==0.5) ? 2 : (scale==0.25) ? 1 : "Folle");
@@ -545,15 +543,6 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
     //slider handle
     /**
-     * Gestisce la posizione degli slider tramite i trigger analogici dell'operatore.
-     *
-     * R2 (triggerOut) incrementa la posizione verso SOUT (fuori).
-     * L2 (triggerIn) decrementa la posizione verso SIN (dentro).
-     * Nessun trigger premuto = posizione bloccata all'ultimo valore.
-     *
-     * Lo step per ciclo è proporzionale alla pressione del trigger: più si preme,
-     * più lo slider si muove velocemente. La posizione è sempre tenuta nei limiti
-     * [SIN, SOUT]. Per regolare la velocità di movimento cambia SLIDER_STEP.
      *
      *
      */
@@ -638,15 +627,15 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         else if (outtakeBtn && !flywheelActivate && !flywheelFullSpeed && flywheel_right.getVelocity() < 50 && flywheel_left.getVelocity() < 50) {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
             servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-            upIntakeMotor.setPower(0.4);
-            upIntakeSlowMotor.setPower(0.7);
+            upIntakeMotor.setPower(0.9);
+            upIntakeSlowMotor.setPower(0.2);
             // mentre si fa outtake, il flywheel viene spinto all'indietro per aiutare a
             // espellere eventuali palline incastrate
-            flywheel_left.setVelocity(-600);
-            flywheel_right.setVelocity(-600);
+            flywheel_left.setVelocity(-400);
+            flywheel_right.setVelocity(-400);
         }
         else if (outtakeBtn){
-            upIntakeSlowMotor.setPower(0.9);
+            upIntakeMotor.setPower(0.9);
         }
         else {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);

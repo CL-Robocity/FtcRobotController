@@ -82,94 +82,65 @@ aggiunta plexiglass frontale per parziale chiusura intake anche da aperto, manca
 abbassato uno dei 4 pezzi della rampa per arrampicarsi meglio
 rifatti gli zero di entrambi i servo
 
+programma caricato e aggiornato 15/9/26
+SOFTWARE
+modifica combo, ora per l'operator sono i due trigger invece che i due stik
+
+HARDWARE
+riparazione ruota, rifatta altezza della rampa sotto, rifatta altezza della flywheel, modifica posizione ruota climbing per npn collidere con lo sparo
+
+
+programma caricato e aggiornato 18/9/26
+HARDWARE
+modifica degli 0 dei servo e relative lunghezze cordini, test dei driver
+taglio di un pezzo che per spostamento del climbing impediva la retrazione degli slider
+prove varie per modificare l'attacco dei servo degli slider non andati a buon fine
+
+programma caricato e aggiornato 19/9/26
+SOFTWARE
+modifica retrazione slider, ora di piu di prima
+HARDWARE
+diversi tagli agli alberi delle ruote motrici per farci stare il robot nella scatola di trasporto
+
+
+
+
+
 
  */
 
 package org.firstinspires.ftc.teamcode;
 
+import android.os.LimitExceededException;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-//import com.qualcomm.robotcore.hardware.DcMotorSimple;
-//import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
-//import com.qualcomm.robotcore.util.ElapsedTime;
-//import com.qualcomm.robotcore.hardware.DigitalChannel;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcontroller.external.samples.SensorTouch;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
-/*
- * =========================================================================================
- *                                GAMEPAD 1 | GUIDA (DRIVER)
- * =========================================================================================
- *
- *       [L2] Marcia GIÙ (-25%)                                  [R2] Marcia SÙ (+25%)
- *       [L1] Outtake                                            [R1] Intake (Aspirazione)
- *
- *              .---| DPAD |---.                                    .---| TASTI |---.
- *             /      .^.       \                                  /      (Y)        \  Y: [God Mode] Flywheel Full Speed ON/OFF
- *            |     <     >      |                                |    (X)   (B)     | B: Toggle Uster / Arcade (SOLO Claudio Mode)
- *             \      'v'       /                                  \      (A)        /  X: Toggle Climbing
- *              '--------------'                                    '---------------'   A: [God Mode] Sparo Flywheel (se velocityok)
- *             ^: Climb Speed +0.1        [God Mode] dpad_left: Flywheel Idle ON/OFF
- *             v: Climb Speed -0.1
- *
- *                               ( L3 )              ( R3 )
- *                              /      \            /      \
- *                             | L-STICK|          | R-STICK|
- *                              \      /            \      /
- *                               '----'              '----'
- *                         Arcade: Throttle (Y)    Arcade: Sterzo (X)
- *                          Uster: Motore SX (Y)    Uster: Motore DX (Y)
- *
- *
- *
- * -----------------------------------------------------------------------------------------
- *  [!] COMBO ADMIN: Premi [L3 + R3] su GAMEPAD1 o GAMEPAD2 per attivare/disattivare GOD MODE.
- *      Chi preme la combo diventa il "master" e assume il controllo TOTALE (guida, marce,
- *      climbing, flywheel, intake, sparo, servo). L'altro controller resta disattivato.
- *      La Uster Mode NON è disponibile in God Mode, solo in Claudio Mode.
- * =========================================================================================
- */
-
-/*
- * =========================================================================================
- *                              GAMEPAD 2 | MECCANISMI (OPERATOR)
- * =========================================================================================
- *
- *       [L2] Slider GIÙ (decrementa posizione)                  [R2] Slider SÙ (incrementa posizione)
- *       [L1] Outtake (spinge anche il flywheel a -500)          [R1] Intake (Aspirazione)
- *
- *              .---| DPAD |---.                                    .---| TASTI |---.
- *             /      .^.       \                                  /      (Y)        \  Y: Toggle Flywheel Full Speed (ON/OFF)
- *            |     <     >      |                                |    (X)   (B)     | B: Toggle Servo (Aperto/Chiuso)
- *             \      'v'       /                                  \      (A)        /  X: Toggle Flywheel Idle (ON/OFF)
- *              '--------------'                                    '---------------'   A: Sparo (Apri Servitori + Intake) *Attivo solo se velocityok*
- *
- *                               ( L3 )              ( R3 )
- *                              /      \            /      \
- *                             | L-STICK|          | R-STICK|
- *                              \      /            \      /
- *                               '----'              '----'
- *                          L3+R3: Attiva God Mode  (Non usato)
- * =========================================================================================
- */
-
-
-
+import java.sql.Time;
 
 @TeleOp (name = "testmodificheuniche",group = "TeleOp Competition")
 public class TeleOpMovements_NewControl extends LinearOpMode {
 
-    //private final ElapsedTime timerServo = new ElapsedTime();
+    private final ElapsedTime timerSlider = new ElapsedTime();
 
     // DICHIARARE I MOTORI
     private DcMotor leftMotor, rightMotor, upIntakeMotor, upIntakeSlowMotor, climbMotorInt, climbMotorEst;
 
     private DcMotorEx flywheel_left, flywheel_right;
     private Servo servitoreRight, servitoreLeft, sliderRight, sliderLeft;
-    //private DigitalChannel magneticLimit;
+
+    // DICHIARAZIONE SENSORI
+    private DigitalChannel magneticSensor;
 
     // USE: UPDATE (rampa di velocità per il flywheel, vedi metodo update() in fondo al file)
     private int currentPower = 0;
@@ -182,9 +153,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     private static final int TARGET_VELOCITY = 2000;
     private static final int IDLE_VELOCITY = 900;
     private static final double SERVO_CLOSE = 0.0;
-    private static final double SERVO_OPEN = 0.2;
-
-    private static final double SERVO_SHOOT = 0.2;
+    private static final double SERVO_OPEN = 0.25;
+    private static final double SERVO_SHOOT = 0.25;
     double scale = 0.75;
     double climbVelocity = 0.5;
 
@@ -221,14 +191,22 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean lastDownDpad = false;
 
     //USE: SLIDER
-    private static final double SOUT = 0;
-    private static final double SIN = 0.86;
+    private static final double SOUT = 0.2;
+    private static final double SIN = 0.0;
     boolean sliderStateBefore = false;
     boolean isSliderOpen = false;          // mantenuto per uso futuro
-    double sliderPosition = SIN;
+
+
+
+
+
+
 
     @Override
     public void runOpMode() throws InterruptedException{
+
+        /// INITIALIZING SENSOR
+        magneticSensor = hardwareMap.get(DigitalChannel.class, "magnetic_sensor");
 
         /// INITIALIZING MOTORS
         leftMotor = hardwareMap.get(DcMotor.class, "left_motor");
@@ -303,6 +281,11 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         climbMotorInt.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         climbMotorEst.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        //SENSORI
+        magneticSensor.setMode(DigitalChannel.Mode.INPUT);
+
+
+
 
         /// WHEN THE ROBOT IS READY, PRESS PLAY
         telemetry.addLine("La vespa è in moto e pronta a partire.");
@@ -317,8 +300,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             // L3+R3 su un gamepad attiva il God Mode e lo rende "master".
             // L3+R3 su un gamepad (uno qualsiasi) mentre il God Mode è attivo lo disattiva.
 
-            boolean combo1Actual = gamepad1.left_stick_button && gamepad1.right_stick_button;
-            boolean combo2Actual = gamepad2.left_stick_button && gamepad2.right_stick_button;
+            boolean combo1Actual = gamepad1.right_stick_button && gamepad1.left_stick_button;
+            boolean combo2Actual = gamepad2.right_trigger_pressed && gamepad2.left_trigger_pressed;
 
             if (combo1Actual && !combo1StateBefore){
                 fullController = !fullController;
@@ -401,8 +384,6 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                         operator.left_bumper    // outtake
                 );
 
-
-
             } else {
                 //DRIVER
                 applyGearAndDrive(
@@ -423,9 +404,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 );
             }
 
-
             // A SUMMARY FOR THE DRIVER
             telemetry.addData("Status", "Running");
+
             telemetry.addData("Left POWER", leftPower);
             telemetry.addData("Right POWER", rightPower);
             telemetry.addData("Left ENCODER", leftMotor.getCurrentPosition());
@@ -442,9 +423,13 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             telemetry.addData("Speed", (scale==1.0) ? 4 : (scale==0.75) ? 3 : (scale==0.5) ? 2 : (scale==0.25) ? 1 : "Folle");
             telemetry.addData("Climbing mode", (climbingMode) ? "Activated" : "OFF");
             telemetry.addData("Climbing velocity", climbVelocity);
+            telemetry.addData("slide open",isSliderOpen);
+            showJollyRoger();
             telemetry.update();
         }
     }
+
+
 
     // =========================================================================================
     //                                    METODI CONDIVISI
@@ -502,6 +487,28 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
         leftMotor.setPower(leftPower);
         rightMotor.setPower(rightPower);
+    }
+
+    private void showJollyRoger() {
+        telemetry.setDisplayFormat(Telemetry.DisplayFormat.HTML);
+
+        String jollyRoger =
+                "<font face=\"monospace\" color=\"#FFFFFF\">" +
+                        "          .....          <br>" +
+                        " ---- .-+-.....-+-. -+-- <br>" +
+                        "+...+-+.         .+-+...+<br>" +
+                        "-#++-+.          ..#-++#-<br>" +
+                        "     +..-++. .++-..+.    <br>" +
+                        "     .#.###. .###.#.     <br>" +
+                        "     .+. ..-#-.  .+.     <br>" +
+                        "  ...+..++.... +#..+.... <br>" +
+                        ".#.  .+..+-...-+..+.. .+=<br>" +
+                        "  +..-             -..+. <br>" +
+                        "   ...             ....  <br>" +
+                        "</font>";
+
+        telemetry.addData("Jolly Roger", "<br>" + jollyRoger);
+        telemetry.update();
     }
 
     /**

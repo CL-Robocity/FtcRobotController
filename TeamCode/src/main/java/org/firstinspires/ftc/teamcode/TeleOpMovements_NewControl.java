@@ -137,7 +137,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     private DcMotor leftMotor, rightMotor, upIntakeMotor, upIntakeSlowMotor, climbMotorInt, climbMotorEst;
 
     private DcMotorEx flywheel_left, flywheel_right;
-    private Servo servitoreRight, servitoreLeft, sliderRight, sliderLeft;
+    private Servo servitoreRight, servitoreLeft, sliderRight, sliderLeft, hookServo;
 
     // DICHIARAZIONE SENSORI
     private DigitalChannel magneticSensor;
@@ -191,7 +191,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean lastDownDpad = false;
 
     //USE: SLIDER
-    private static final double SOUT = 0.2;
+    private static final double SOUT = 0.60;
     private static final double SIN = 0.0;
     boolean sliderStateBefore = false;
     boolean isSliderOpen = false;          // mantenuto per uso futuro
@@ -226,6 +226,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         climbMotorInt = hardwareMap.get(DcMotor.class, "climb_motor_int");
         climbMotorEst = hardwareMap.get(DcMotor.class, "climb_motor_est");
 
+        hookServo = hardwareMap.get(Servo.class, "hook_servo");
+
         /// SET MOVE DIRECTION OF MOTORS
         leftMotor.setDirection(DcMotor.Direction.REVERSE);
         rightMotor.setDirection(DcMotor.Direction.FORWARD);
@@ -240,6 +242,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
         sliderLeft.setDirection(Servo.Direction.REVERSE);
 
+        hookServo.setDirection(Servo.Direction.FORWARD); // Da capire
 
         climbMotorInt.setDirection(DcMotor.Direction.REVERSE);
         climbMotorEst.setDirection(DcMotor.Direction.REVERSE);
@@ -286,6 +289,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
 
 
+        // inizializzare la posizione di hookServo
+        // hookServo.setPosition(0.0); //da vedere
 
         /// WHEN THE ROBOT IS READY, PRESS PLAY
         telemetry.addLine("La vespa è in moto e pronta a partire.");
@@ -566,7 +571,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         }
         else{
             sliderLeft.setPosition(SIN);
-            sliderRight.setPosition(SIN);
+            sliderRight.setPosition(SIN+0.07);
         }
 
 

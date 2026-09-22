@@ -388,7 +388,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
                         operator.left_bumper,    // outtake
-                        operator.dpad_left
+                        operator.dpad_left       // hook
                 );
 
             } else {
@@ -408,7 +408,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
                         operator.left_bumper,    // outtake
-                        operator.dpad_left
+                        operator.dpad_left       // hook
                 );
             }
 
@@ -500,23 +500,29 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     private void showJollyRoger() {
         telemetry.setDisplayFormat(Telemetry.DisplayFormat.HTML);
 
-        String jollyRoger =
-                "<font face=\"monospace\" color=\"#FFFFFF\">" +
-                        "          .....          <br>" +
-                        " ---- .-+-.....-+-. -+-- <br>" +
-                        "+...+-+.         .+-+...+<br>" +
-                        "-#++-+.          ..#-++#-<br>" +
-                        "     +..-++. .++-..+.    <br>" +
-                        "     .#.###. .###.#.     <br>" +
-                        "     .+. ..-#-.  .+.     <br>" +
-                        "  ...+..++.... +#..+.... <br>" +
-                        ".#.  .+..+-...-+..+.. .+=<br>" +
-                        "  +..-             -..+. <br>" +
-                        "   ...             ....  <br>" +
-                        "</font>";
+        String[] righe = {
+                "          .....          ",
+                " ---- .-+-.....-+-. -+-- ",
+                "+...+-+.         .+-+...+",
+                "-#++-+.          ..#-++#-",
+                "     +..-++. .++-..+.    ",
+                "     .#.###. .###.#.     ",
+                "     .+. ..-#-.  .+.     ",
+                "  ...+..++.... +#..+.... ",
+                ".#.  .+..+-...-+..+.. .+=",
+                "  +..-             -..+. ",
+                "   ...             ....  "
+        };
 
-        telemetry.addData("Jolly Roger", "<br>" + jollyRoger);
+        StringBuilder sb = new StringBuilder("<font face=\"monospace\" color=\"#FFFFFF\">");
+        for (String riga : righe) {
+            sb.append(riga.replace(" ", "&nbsp;")).append("<br>");
+        }
+        sb.append("</font>");
+
+        telemetry.addData("Jolly Roger", "<br>" + sb.toString());
         telemetry.update();
+
     }
 
     /**

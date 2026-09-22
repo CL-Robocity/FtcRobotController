@@ -196,7 +196,11 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean sliderStateBefore = false;
     boolean isSliderOpen = false;          // mantenuto per uso futuro
 
-
+    // USE: HOOK
+    private static final double HOOKUP = 0.2;
+    private static final double HOOKDOWN = 0.0;
+    boolean hookStateBefore = false;
+    boolean hookIsUp = false;
 
 
 
@@ -288,9 +292,6 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         magneticSensor.setMode(DigitalChannel.Mode.INPUT);
 
 
-
-        // inizializzare la posizione di hookServo
-        // hookServo.setPosition(0.0); //da vedere
 
         /// WHEN THE ROBOT IS READY, PRESS PLAY
         telemetry.addLine("La vespa è in moto e pronta a partire.");
@@ -386,7 +387,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                         operator.right_stick_button,     // toggle Idle (spostato per non collidere con Climbing su X)
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
-                        operator.left_bumper    // outtake
+                        operator.left_bumper,    // outtake
+                        operator.dpad_left
                 );
 
             } else {
@@ -405,7 +407,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                         operator.touchpad,             // toggle Idle
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
-                        operator.left_bumper    // outtake
+                        operator.left_bumper,    // outtake
+                        operator.dpad_left
                 );
             }
 
@@ -603,7 +606,8 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
      * //@param slider          tasto per lo slider
      */
     private void handleMechanisms(boolean shootBtn, boolean servoToggleBtn, boolean idleToggleBtn,
-                                  boolean fullSpeedToggleBtn, boolean intakeBtn, boolean outtakeBtn){
+                                  boolean fullSpeedToggleBtn, boolean intakeBtn, boolean outtakeBtn,
+                                  boolean hookToggleBtn){
 
         // --- Toggle servo (aperto/chiuso quando non si sta sparando o facendo intake/outtake) ---
         if (servoToggleBtn && !bStateBeforeServo){
@@ -682,6 +686,18 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             // subito il -500 impostato qui sopra
             flywheel_right.setVelocity(0);
             flywheel_left.setVelocity(0);
+        }
+
+        // --- Toggle HOOK ---
+        if (hookToggleBtn && !hookStateBefore){
+            hookIsUp = !hookIsUp;
+        }
+        hookStateBefore = hookToggleBtn;
+
+        if (hookIsUp){
+            hookServo.setPosition(HOOKUP);
+        } else {
+            hookServo.setPosition(HOOKDOWN);
         }
     }
 

@@ -111,11 +111,8 @@ diversi tagli agli alberi delle ruote motrici per farci stare il robot nella sca
 
 package org.firstinspires.ftc.teamcode;
 
-import android.os.LimitExceededException;
-
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
@@ -123,13 +120,10 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcontroller.external.samples.SensorTouch;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
-import java.sql.Time;
-
-@TeleOp (name = "testmodificheuniche",group = "TeleOp Competition")
-public class TeleOpMovements_NewControl extends LinearOpMode {
+@TeleOp (name = "FGC_Italy TeleOP", group = "TeleOp Competition")
+public class TeleOpMovements_FGC_Italy extends LinearOpMode {
 
     private final ElapsedTime timerSlider = new ElapsedTime();
 
@@ -151,7 +145,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
     // USE: COSTANTI / VARIABILI con valore predefinito
     private static final int TARGET_VELOCITY = 2000;
-    private static final int IDLE_VELOCITY = 900;
+    private static final int IDLE_VELOCITY = 1200;
     private static final double SERVO_CLOSE = 0.0;
     private static final double SERVO_OPEN = 0.25;
     private static final double SERVO_SHOOT = 0.25;
@@ -191,16 +185,17 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
     boolean lastDownDpad = false;
 
     //USE: SLIDER
-    private static final double SOUT = 0.60;
-    private static final double SIN = 0.0;
+    private static final double SOUT = 0.35;
+    private static final double SIN = 0.9;
+    private static  final double SOUTTT =0.0;
     boolean sliderStateBefore = false;
-    boolean isSliderOpen = false;          // mantenuto per uso futuro
+    boolean isSliderOpen = true;          // mantenuto per uso futuro
 
     // USE: HOOK
-    private static final double HOOKUP = 0.2;
-    private static final double HOOKDOWN = 0.0;
-    boolean hookStateBefore = false;
+    private static final double HOOKUP = 0.48;
+    private static final double HOOKFLAG = 1.0;
     boolean hookIsUp = false;
+    boolean hookStateBefore = false;
 
 
 
@@ -302,6 +297,12 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
         waitForStart();
         while (opModeIsActive()){
 
+            // HOOK
+            if (!hookIsUp){
+                hookServo.setPosition(HOOKUP);
+                hookIsUp = true;
+            }
+
             /// -*=======*- COMBO (da entrambi i gamepad) -*=======*-
             // L3+R3 su un gamepad attiva il God Mode e lo rende "master".
             // L3+R3 su un gamepad (uno qualsiasi) mentre il God Mode è attivo lo disattiva.
@@ -322,16 +323,16 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             combo1StateBefore = combo1Actual;
             combo2StateBefore = combo2Actual;
 
-            // -*=======*- SCELTA DEL GAMEPAD ATTIVO -*=======*-
-            // "driver" è il gamepad che guida il robot in questo ciclo:
-            //   - in God Mode è il master (unico gamepad che comanda tutto)
-            //   - in Claudio Mode è sempre gamepad1
-            // "operator" è il gamepad che comanda i meccanismi in questo ciclo:
-            //   - in God Mode è di nuovo il master (stesso gamepad fa tutto)
-            //   - in Claudio Mode è sempre gamepad2
-            // Grazie a questa astrazione, handleMechanisms() e handleClimbing() vengono
-            // chiamati UNA SOLA VOLTA a riga di codice, sia che si sia in God Mode che in
-            // Claudio Mode: cambia solo quale gamepad fisico viene passato come parametro.
+            // -*=======*- ACTIVE GAMEPAD SELECTION -*=======*-
+            // "driver" is the gamepad driving the robot this cycle:
+            // - God Mode: the master (one gamepad controls everything)
+            // - Claudio Mode: always gamepad1
+            // "operator" is the gamepad controlling mechanisms this cycle:
+            // - God Mode: the master again (same gamepad does everything)
+            // - Claudio Mode: always gamepad2
+            // This abstraction means handleMechanisms() and handleClimbing() are each
+            // called ONCE in the code, in both modes: only which physical gamepad
+            // gets passed changes.
 
             Gamepad master = masterIsGamepad1 ? gamepad1 : gamepad2;
             Gamepad driver = fullController ? master : gamepad1;
@@ -379,7 +380,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
 
                 handleClimbing(driver.x, driver.dpad_up, driver.dpad_down);
 
-                handleSlider(operator.touchpad);
+                handleSlider(operator.touchpad,
+                        operator.left_bumper
+                            );
 
                 handleMechanisms(
                         operator.a,            // sparo
@@ -387,8 +390,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                         operator.right_stick_button,     // toggle Idle (spostato per non collidere con Climbing su X)
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
-                        operator.left_bumper,    // outtake
-                        operator.dpad_left       // hook
+                        operator.left_bumper    // outtake
                 );
 
             } else {
@@ -400,21 +402,24 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
                 handleClimbing(driver.x, driver.dpad_up, driver.dpad_down);
 
                 //OPERATOR
-                handleSlider(operator.x);
+                handleSlider(operator.x,
+                             operator.left_bumper);
                 handleMechanisms(
                         operator.a,            // sparo
                         operator.b,             // toggle servo
                         operator.touchpad,             // toggle Idle
                         operator.y,             // toggle Full Speed
                         operator.right_bumper,  // intake
-                        operator.left_bumper,    // outtake
-                        operator.dpad_left       // hook
+                        operator.left_bumper    // outtake
                 );
+                handleFlag(
+                        operator.right_trigger,
+                        operator.left_trigger);
             }
 
             // A SUMMARY FOR THE DRIVER
-            telemetry.addData("Status", "Running");
 
+            telemetry.addData("Status", "Running");
             telemetry.addData("Left POWER", leftPower);
             telemetry.addData("Right POWER", rightPower);
             telemetry.addData("Left ENCODER", leftMotor.getCurrentPosition());
@@ -432,7 +437,9 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             telemetry.addData("Climbing mode", (climbingMode) ? "Activated" : "OFF");
             telemetry.addData("Climbing velocity", climbVelocity);
             telemetry.addData("slide open",isSliderOpen);
-            showJollyRoger();
+            telemetry.addData("slider pos",sliderLeft.getPosition());
+            telemetry.addData("hook pos", hookServo.getPosition());
+
             telemetry.update();
         }
     }
@@ -567,20 +574,25 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
      *
      *
      */
-    private void handleSlider(boolean sliderBtn) {
+    private void handleSlider(boolean sliderBtn, boolean outtake) {
 
         if (sliderBtn && !sliderStateBefore) {
             isSliderOpen = !isSliderOpen;
         }
         sliderStateBefore = sliderBtn;
 
+
         if(isSliderOpen){
-            sliderLeft.setPosition(SOUT);
-            sliderRight.setPosition(SOUT);
+            sliderLeft.setPosition(SIN);
+            sliderRight.setPosition(SIN);
         }
         else{
-            sliderLeft.setPosition(SIN);
-            sliderRight.setPosition(SIN+0.07);
+            if(!isSliderOpen && !outtake)
+            {
+                sliderLeft.setPosition(SOUT+0.05);
+                sliderRight.setPosition(SOUT+0.07);
+            }
+
         }
 
 
@@ -612,8 +624,7 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
      * //@param slider          tasto per lo slider
      */
     private void handleMechanisms(boolean shootBtn, boolean servoToggleBtn, boolean idleToggleBtn,
-                                  boolean fullSpeedToggleBtn, boolean intakeBtn, boolean outtakeBtn,
-                                  boolean hookToggleBtn){
+                                  boolean fullSpeedToggleBtn, boolean intakeBtn, boolean outtakeBtn){
 
         // --- Toggle servo (aperto/chiuso quando non si sta sparando o facendo intake/outtake) ---
         if (servoToggleBtn && !bStateBeforeServo){
@@ -646,18 +657,22 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             upIntakeMotor.setPower(-1);
             upIntakeSlowMotor.setPower(-1);
         }
-        else if (outtakeBtn && !flywheelActivate && !flywheelFullSpeed && flywheel_right.getVelocity() < 50 && flywheel_left.getVelocity() < 50) {
+        else if (outtakeBtn && flywheel_right.getVelocity() < 50 && flywheel_left.getVelocity() < 50 && !isSliderOpen) {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
             servitoreLeft.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
-            upIntakeMotor.setPower(0.9);
-            upIntakeSlowMotor.setPower(0.2);
+            upIntakeMotor.setPower(1.0);
+            upIntakeSlowMotor.setPower(1.0);
             // mentre si fa outtake, il flywheel viene spinto all'indietro per aiutare a
             // espellere eventuali palline incastrate
-            flywheel_left.setVelocity(-400);
-            flywheel_right.setVelocity(-400);
+            //flywheel_left.setVelocity(-400);
+            //flywheel_right.setVelocity(-400);
+            sliderLeft.setPosition(SOUTTT);
+            sliderRight.setPosition(SOUTTT);
+
         }
-        else if (outtakeBtn){
-            upIntakeMotor.setPower(0.9);
+        else if (outtakeBtn && !isSliderOpen){
+            upIntakeMotor.setPower(1);
+            upIntakeSlowMotor.setPower(0);
         }
         else {
             servitoreRight.setPosition(servoToggleOpen ? SERVO_OPEN : SERVO_CLOSE);
@@ -694,17 +709,19 @@ public class TeleOpMovements_NewControl extends LinearOpMode {
             flywheel_left.setVelocity(0);
         }
 
-        // --- Toggle HOOK ---
-        if (hookToggleBtn && !hookStateBefore){
-            hookIsUp = !hookIsUp;
-        }
-        hookStateBefore = hookToggleBtn;
+    }
 
-        if (hookIsUp){
-            hookServo.setPosition(HOOKUP);
+    private void handleFlag(double rightBumper, double leftBumper){
+        double newPos;
+        double increment = 0.005;
+
+        if (rightBumper>0.01){
+            newPos = hookServo.getPosition() + rightBumper * increment;
         } else {
-            hookServo.setPosition(HOOKDOWN);
+            newPos = hookServo.getPosition() - leftBumper * increment;
         }
+        newPos = Math.max(0.25, Math.min(0.92, newPos));
+        hookServo.setPosition(newPos);
     }
 
     /**
